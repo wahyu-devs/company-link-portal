@@ -1,10 +1,10 @@
-# Perkom Link Portal
+# Company Link Portal
 
 A lightweight internal link portal for centralized access to company documents, tools, and resources.
 
 ## Overview
 
-Perkom Link Portal is a simple static web page designed to help internal users access important company links from one centralized place. It provides a clean, responsive, and mobile-friendly interface with search functionality.
+Company Link Portal is a simple static web page designed to help internal users access important company links from one centralized place. It provides a clean, responsive, and mobile-friendly interface with search functionality.
 
 ## Features
 

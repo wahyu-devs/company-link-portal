@@ -110,6 +110,76 @@
       font: inherit;
     }
 
+    .loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      opacity: 1;
+      visibility: visible;
+      transition:
+        opacity 240ms ease,
+        visibility 240ms ease;
+    }
+
+    .loading-screen.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .loading-mark {
+      width: 230px;
+      height: 230px;
+      display: grid;
+      place-items: center;
+      perspective: 720px;
+    }
+
+    .loading-logo {
+      display: block;
+      width: 200px;
+      height: 200px;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 22px rgba(0, 121, 255, 0.22));
+      transform-style: preserve-3d;
+      animation: loading-logo-spin 2200ms cubic-bezier(0.55, 0.08, 0.24, 1) infinite;
+    }
+
+    .loading-logo-light {
+      display: none;
+    }
+
+    [data-theme="light"] .loading-logo-dark {
+      display: none;
+    }
+
+    [data-theme="light"] .loading-logo-light {
+      display: block;
+    }
+
+    @keyframes loading-logo-spin {
+      0% {
+        transform: rotateY(0deg) rotateX(0deg) scale(1);
+      }
+
+      50% {
+        transform: rotateY(180deg) rotateX(8deg) scale(1.04);
+      }
+
+      to {
+        transform: rotateY(360deg) rotateX(0deg) scale(1);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .loading-logo {
+        animation-duration: 3200ms;
+      }
+    }
+
     .page-shell {
       width: 100%;
       min-height: 100vh;
@@ -672,6 +742,13 @@
 </head>
 
 <body>
+  <div id="pageLoader" class="loading-screen" role="status" aria-live="polite" aria-label="Loading page">
+    <div class="loading-mark">
+      <img class="loading-logo loading-logo-dark" src="perkom-loading.png" alt="" aria-hidden="true" />
+      <img class="loading-logo loading-logo-light" src="perkom-loading-light.png" alt="" aria-hidden="true" />
+    </div>
+  </div>
+
   <main class="page-shell">
     <div class="page-container">
       <header class="profile-card">
@@ -793,7 +870,10 @@
     const themeSwitchLabel = document.getElementById("themeSwitchLabel");
     const themeToggleIcon = document.getElementById("themeToggleIcon");
     const themeColorMeta = document.getElementById("themeColorMeta");
+    const pageLoader = document.getElementById("pageLoader");
     const THEME_STORAGE_KEY = "linkPortalTheme";
+    const LOADER_MIN_DURATION = 2000;
+    const loaderStartedAt = performance.now();
 
     function setTheme(theme) {
       const isLight = theme === "light";
@@ -888,6 +968,16 @@
       linkList.hidden = !hasResult;
     }
 
+    function hidePageLoader() {
+      const elapsed = performance.now() - loaderStartedAt;
+      const remainingDelay = Math.max(0, LOADER_MIN_DURATION - elapsed);
+
+      window.setTimeout(() => {
+        pageLoader?.classList.add("is-hidden");
+        pageLoader?.addEventListener("transitionend", () => pageLoader.remove(), { once: true });
+      }, remainingDelay);
+    }
+
     const activeTheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
 
     setTheme(activeTheme);
@@ -900,6 +990,12 @@
     searchInput.addEventListener("input", renderLinks);
 
     renderLinks();
+
+    if (document.readyState === "complete") {
+      hidePageLoader();
+    } else {
+      window.addEventListener("load", hidePageLoader, { once: true });
+    }
   </script>
 </body>
 

@@ -14,6 +14,7 @@ Company Link Portal is a simple static web page designed to help internal users 
 - Dark/light mode interface
 - Bootstrap Icons integration
 - Favicon and mobile home screen icon support
+- Social sharing preview metadata
 - Static HTML, CSS, and JavaScript with no build process required
 
 ## Technologies Used

@@ -29,6 +29,18 @@ Company Link Portal is a simple static web page designed to help internal users 
 
 Open `index.html` directly in a browser, or deploy it to any static hosting service.
 
+## Project Structure
+
+```text
+.
+├── assets
+│   └── images
+├── index.html
+├── main.js
+├── styles.css
+└── README.md
+```
+
 ## Deployment Options
 
 This project can be deployed using:
@@ -41,7 +53,7 @@ This project can be deployed using:
 
 ## Customization
 
-To add or update internal links, edit the `internalLinks` array inside `index.html`.
+To add or update internal links, edit the `internalLinks` array inside `main.js`.
 
 Example:
 

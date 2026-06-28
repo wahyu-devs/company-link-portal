@@ -20,9 +20,13 @@ Company Link Portal is a simple static web page designed to help internal users 
 
 ```text
 .
+├── assets
+│   └── images
+│       ├── favicon.png
+│       ├── perkom-loading-light.png
+│       ├── perkom-loading.png
+│       └── perkom-logo.png
 ├── index.html
-├── perkom-logo.png
-├── favicon.png
 └── README.md
 ```
 

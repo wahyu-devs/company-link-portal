@@ -1,6 +1,6 @@
 # Company Link Portal
 
-A lightweight internal link portal for centralized access to company documents, tools, and resources.
+A lightweight internal link portal for centralized access to company documents and resources.
 
 ## Overview
 
@@ -10,25 +10,11 @@ Company Link Portal is a simple static web page designed to help internal users 
 
 - Centralized internal company links
 - Responsive layout for desktop and mobile
-- Search by link name, category, or description
-- Dark mode interface
+- Search by link name or description
+- Dark/light mode interface
 - Bootstrap Icons integration
 - Favicon and mobile home screen icon support
 - Static HTML, CSS, and JavaScript with no build process required
-
-## Project Structure
-
-```text
-.
-├── assets
-│   └── images
-│       ├── favicon.png
-│       ├── perkom-loading-light.png
-│       ├── perkom-loading.png
-│       └── perkom-logo.png
-├── index.html
-└── README.md
-```
 
 ## Technologies Used
 
@@ -60,7 +46,7 @@ Example:
 
 ```js
 {
-  name: "Document Proposal Project Ayana Bali",
+  name: "Document Proposal Project",
   category: "Documentation",
   description: "Project proposal documents and related files.",
   icon: "bi-file-earmark-text",

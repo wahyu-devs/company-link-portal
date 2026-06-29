@@ -1,0 +1,23 @@
+{
+  "name": "company-link-portal",
+  "version": "1.0.0",
+  "description": "A lightweight internal link portal for centralized access to company documents and resources.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "echo 'This is a static site. Open index.html in your browser or use a local server.'",
+    "build": "echo 'No build step required for this static site.'",
+    "lint": "echo 'No linter configured yet.'"
+  },
+  "keywords": [
+    "internal",
+    "links",
+    "portal",
+    "static"
+  ],
+  "author": "Wahyu",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@vercel/analytics": "^1.3.1"
+  }
+}

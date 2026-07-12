@@ -254,6 +254,11 @@ button {
   box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
+.survey-home-button i {
+  font-size: 20px;
+  line-height: 1;
+}
+
 .company-name {
   margin: 0 0 4px;
   font-size: 16px;
@@ -841,8 +846,8 @@ h1 {
 }
 
 .survey-remove-row {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border-radius: var(--radius-sm);
   display: inline-grid;

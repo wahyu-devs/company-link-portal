@@ -109,11 +109,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function createLinkCard(link) {
     const card = document.createElement("a");
+    const isExternalLink = /^https?:\/\//i.test(link.url);
 
     card.className = "link-card";
     card.href = link.url;
-    card.target = "_blank";
-    card.rel = "noopener noreferrer";
+
+    if (isExternalLink) {
+      card.target = "_blank";
+      card.rel = "noopener noreferrer";
+    }
+
     card.setAttribute(
       "aria-label",
       `Open ${link.name} - ${link.description}`
@@ -179,7 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const elapsed = performance.now() - loaderStartedAt;
     const remainingDelay = Math.max(0, LOADER_MIN_DURATION - elapsed);
 
-    window.setTimeout(() => {
+    setTimeout(() => {
       pageLoader?.classList.add("is-hidden");
       pageLoader?.addEventListener("transitionend", () => pageLoader.remove(), { once: true });
     }, remainingDelay);
@@ -201,6 +206,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (document.readyState === "complete") {
     hidePageLoader();
   } else {
-    window.addEventListener("load", hidePageLoader, { once: true });
+    globalThis.addEventListener("load", hidePageLoader, { once: true });
   }
 });

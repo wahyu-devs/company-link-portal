@@ -91,6 +91,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const formStatus = document.getElementById("formStatus");
   const savedSurveyPanel = document.getElementById("savedSurveyPanel");
   const savedSurveyList = document.getElementById("savedSurveyList");
+  const pageLoader = document.getElementById("pageLoader");
+  const LOADER_MIN_DURATION = 2000;
+  const loaderStartedAt = performance.now();
 
   function itemColumns() {
     return [
@@ -488,6 +491,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setStatus(message) {
     formStatus.textContent = message;
+  }
+
+  function hidePageLoader() {
+    const elapsed = performance.now() - loaderStartedAt;
+    const remainingDelay = Math.max(0, LOADER_MIN_DURATION - elapsed);
+
+    setTimeout(() => {
+      pageLoader?.classList.add("is-hidden");
+      pageLoader?.addEventListener("transitionend", () => pageLoader.remove(), { once: true });
+    }, remainingDelay);
   }
 
   function escapeXml(value) {
@@ -1231,4 +1244,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   initializeForm();
+
+  if (document.readyState === "complete") {
+    hidePageLoader();
+  } else {
+    globalThis.addEventListener("load", hidePageLoader, { once: true });
+  }
 });

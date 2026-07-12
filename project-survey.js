@@ -34,11 +34,11 @@ document.addEventListener("DOMContentLoaded", () => {
     pulls: {
       target: document.getElementById("pullRows"),
       columns: [
-        { key: "type", label: "Jenis Tarikan", input: "text", placeholder: "Masukkan jenis tarikan" },
-        { key: "length", label: "Panjang (m)", input: "number", placeholder: "Masukkan panjang" },
-        { key: "cable", label: "Tipe Kabel", input: "text", placeholder: "Masukkan tipe kabel" },
-        { key: "location", label: "Detail Lokasi", input: "text", placeholder: "Masukkan detail lokasi" },
-        { key: "note", label: "Catatan", input: "text", placeholder: "Masukkan catatan" },
+        { key: "type", label: "Jenis Tarikan", input: "text" },
+        { key: "length", label: "Panjang (m)", input: "number" },
+        { key: "cable", label: "Tipe Kabel", input: "text" },
+        { key: "location", label: "Detail Lokasi", input: "text" },
+        { key: "note", label: "Catatan", input: "text" },
       ],
     },
     activeDevices: {
@@ -70,9 +70,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function itemColumns() {
     return [
-      { key: "description", label: "Deskripsi", input: "text", placeholder: "Masukkan deskripsi" },
-      { key: "qty", label: "Qty", input: "number", placeholder: "Masukkan jumlah" },
-      { key: "unit", label: "Satuan", input: "text", placeholder: "Masukkan satuan" },
+      { key: "description", label: "Deskripsi", input: "text" },
+      { key: "qty", label: "Qty", input: "number" },
+      { key: "unit", label: "Satuan", input: "text" },
     ];
   }
 
@@ -147,7 +147,6 @@ document.addEventListener("DOMContentLoaded", () => {
         input.type = column.input;
         input.inputMode = column.input === "number" ? "decimal" : "text";
         input.min = column.input === "number" ? "0" : "";
-        input.placeholder = column.placeholder;
         input.value = row[column.key] ?? "";
         input.dataset.section = sectionKey;
         input.dataset.field = column.key;

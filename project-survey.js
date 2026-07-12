@@ -265,9 +265,9 @@ document.addEventListener("DOMContentLoaded", () => {
       savedSurveys.unshift(draft);
       writeSavedSurveys(savedSurveys);
       renderSavedSurveys(savedSurveys);
-      setStatus("Draft survey berhasil disimpan.");
+      setStatus("Draft survey berhasil disimpan.", "success");
     } catch {
-      setStatus("Draft survey belum bisa disimpan di browser ini.");
+      setStatus("Draft survey belum bisa disimpan di browser ini.", "danger");
     }
   }
 
@@ -278,13 +278,13 @@ document.addEventListener("DOMContentLoaded", () => {
       openSavedSurveyModal();
 
       if (!savedSurveys.length) {
-        setStatus("Belum ada draft survey yang tersimpan.");
+        setStatus("Belum ada draft survey yang tersimpan.", "warning");
         return;
       }
 
-      setStatus("Pilih draft survey yang ingin dimuat.");
+      setStatus("Pilih draft survey yang ingin dimuat.", "info");
     } catch {
-      setStatus("Draft survey tersimpan tidak bisa dibaca.");
+      setStatus("Draft survey tersimpan tidak bisa dibaca.", "danger");
     }
   }
 
@@ -292,7 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
     state = createEmptySurvey();
     initializeForm();
     closeSavedSurveyModal();
-    setStatus("Form survey sudah dikosongkan.");
+    setStatus("Form survey sudah dikosongkan.", "success");
   }
 
   function normalizeSurvey(savedSurvey) {
@@ -394,14 +394,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!draft) {
       renderSavedSurveys(savedSurveys);
-      setStatus("Draft survey tidak ditemukan.");
+      setStatus("Draft survey tidak ditemukan.", "danger");
       return;
     }
 
     state = normalizeSurvey(draft.data);
     initializeForm();
     closeSavedSurveyModal();
-    setStatus(`${savedSurveyTitle(draft)} berhasil dimuat.`);
+    setStatus(`${savedSurveyTitle(draft)} berhasil dimuat.`, "success");
   }
 
   function deleteSavedSurvey(draftId) {
@@ -410,7 +410,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     writeSavedSurveys(nextSurveys);
     renderSavedSurveys(nextSurveys);
-    setStatus("Draft survey berhasil dihapus.");
+    setStatus("Draft survey berhasil dihapus.", "success");
   }
 
   function savedSurveyTitle(draft) {
@@ -453,7 +453,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     for (const [key, label] of requiredFields) {
       if (!data[key]) {
-        setStatus(`${label} wajib diisi.`);
+        setStatus(`${label} wajib diisi.`, "warning");
         document.getElementById(key)?.focus();
         return false;
       }
@@ -472,7 +472,7 @@ document.addEventListener("DOMContentLoaded", () => {
     savedSurveyModal.hidden = true;
   }
 
-  function setStatus(message) {
+  function setStatus(message, variant = "info") {
     clearTimeout(toastTimeoutId);
 
     if (!message) {
@@ -480,13 +480,36 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    surveyToast.textContent = message;
+    const icon = document.createElement("i");
+    icon.className = `bi ${toastIcon(variant)}`;
+    icon.setAttribute("aria-hidden", "true");
+
+    const text = document.createElement("span");
+    text.textContent = message;
+
+    surveyToast.className = `survey-toast survey-toast-${toastVariant(variant)}`;
+    surveyToast.replaceChildren(icon, text);
     surveyToast.hidden = false;
     requestAnimationFrame(() => {
       surveyToast.classList.add("is-visible");
     });
 
     toastTimeoutId = setTimeout(hideStatusToast, 3600);
+  }
+
+  function toastVariant(variant) {
+    return ["success", "warning", "danger", "info"].includes(variant) ? variant : "info";
+  }
+
+  function toastIcon(variant) {
+    const icons = {
+      success: "bi-check-circle-fill",
+      warning: "bi-exclamation-triangle-fill",
+      danger: "bi-x-circle-fill",
+      info: "bi-info-circle-fill",
+    };
+
+    return icons[toastVariant(variant)];
   }
 
   function hideStatusToast() {
@@ -1240,9 +1263,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       downloadBlob(await buildXlsx(data), buildFileName(data, "xlsx"));
-      setStatus("File Excel berhasil dibuat.");
+      setStatus("File Excel berhasil dibuat.", "success");
     } catch {
-      setStatus("File Excel belum bisa dibuat karena asset logo gagal dimuat.");
+      setStatus("File Excel belum bisa dibuat karena asset logo gagal dimuat.", "danger");
     }
   });
 
@@ -1255,9 +1278,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const doc = drawPdf(data, await getLogoDataUrl());
       doc.save(buildFileName(data, "pdf"));
-      setStatus("File PDF berhasil dibuat.");
+      setStatus("File PDF berhasil dibuat.", "success");
     } catch {
-      setStatus("PDF belum bisa dibuat karena library PDF gagal dimuat.");
+      setStatus("PDF belum bisa dibuat karena library PDF gagal dimuat.", "danger");
     }
   });
 

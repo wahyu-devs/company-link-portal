@@ -19,53 +19,26 @@ document.addEventListener("DOMContentLoaded", () => {
   let logoBase64Promise;
 
   const defaultSurvey = {
-    surveyDate: "2026-06-18",
-    surveyorName: "Muhlis",
-    customerName: "Ayana Resort & Spa Bali",
-    customerPic: "Wira",
-    projectName: "Additional CCTV Workshop Engineering",
-    pulls: [
-      { type: "CCTV Outdoor", length: 70, cable: "STP", location: "Area Parkiran Villa", note: "" },
-      { type: "CCTV Outdoor", length: 70, cable: "STP", location: "Area Luar Tangki Solar", note: "" },
-      { type: "CCTV Outdoor", length: 70, cable: "STP", location: "Area Luar Tangki Solar", note: "" },
-      { type: "CCTV Outdoor", length: 50, cable: "STP", location: "Area Dalam Tangki Solar", note: "" },
-      { type: "CCTV Outdoor", length: 70, cable: "STP", location: "Area Luar Tangki Solar", note: "CCTV Existing" },
-      { type: "CCTV Outdoor", length: 70, cable: "STP", location: "Area Luar Tangki Solar", note: "CCTV Existing" },
-    ],
-    activeDevices: [
-      { description: "CCTV Outdoor", qty: 4, unit: "unit" },
-    ],
-    materials: [
-      { description: "Kabel STP", qty: 400, unit: "mtr" },
-      { description: "RJ45", qty: 12, unit: "pcs" },
-      { description: "HDPE", qty: 4, unit: "roll" },
-      { description: "Tiang Galvanis 6 Meter 2 Inch", qty: 2, unit: "pcs" },
-      { description: "Dop 2 Inch", qty: 2, unit: "pcs" },
-      { description: "Duradus", qty: 4, unit: "pcs" },
-      { description: "Cat Hijau", qty: 1, unit: "kg" },
-      { description: "Sock", qty: 2, unit: "pack" },
-      { description: "Clamp", qty: 2, unit: "pack" },
-      { description: "Fischer S6", qty: 200, unit: "pcs" },
-      { description: "Sekrup", qty: 200, unit: "pcs" },
-      { description: "Kabel Ties 30cm", qty: 4, unit: "pack" },
-      { description: "Isolasi", qty: 2, unit: "pcs" },
-      { description: "Cangkul", qty: 2, unit: "pcs" },
-      { description: "Mata Bor Besi 2mm", qty: 2, unit: "pcs" },
-    ],
-    extras: [
-      { description: "Galian", qty: 130, unit: "mtr" },
-    ],
+    surveyDate: "",
+    surveyorName: "",
+    customerName: "",
+    customerPic: "",
+    projectName: "",
+    pulls: [{ type: "", length: "", cable: "", location: "", note: "" }],
+    activeDevices: [{ description: "", qty: "", unit: "" }],
+    materials: [{ description: "", qty: "", unit: "" }],
+    extras: [{ description: "", qty: "", unit: "" }],
   };
 
   const sectionConfig = {
     pulls: {
       target: document.getElementById("pullRows"),
       columns: [
-        { key: "type", label: "Jenis Tarikan", input: "text" },
-        { key: "length", label: "Panjang (m)", input: "number" },
-        { key: "cable", label: "Tipe Kabel", input: "text" },
-        { key: "location", label: "Detail Lokasi", input: "text" },
-        { key: "note", label: "Catatan", input: "text" },
+        { key: "type", label: "Jenis Tarikan", input: "text", placeholder: "Masukkan jenis tarikan" },
+        { key: "length", label: "Panjang (m)", input: "number", placeholder: "Masukkan panjang" },
+        { key: "cable", label: "Tipe Kabel", input: "text", placeholder: "Masukkan tipe kabel" },
+        { key: "location", label: "Detail Lokasi", input: "text", placeholder: "Masukkan detail lokasi" },
+        { key: "note", label: "Catatan", input: "text", placeholder: "Masukkan catatan" },
       ],
     },
     activeDevices: {
@@ -97,9 +70,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function itemColumns() {
     return [
-      { key: "description", label: "Deskripsi", input: "text" },
-      { key: "qty", label: "Qty", input: "number" },
-      { key: "unit", label: "Satuan", input: "text" },
+      { key: "description", label: "Deskripsi", input: "text", placeholder: "Masukkan deskripsi" },
+      { key: "qty", label: "Qty", input: "number", placeholder: "Masukkan jumlah" },
+      { key: "unit", label: "Satuan", input: "text", placeholder: "Masukkan satuan" },
     ];
   }
 
@@ -174,6 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
         input.type = column.input;
         input.inputMode = column.input === "number" ? "decimal" : "text";
         input.min = column.input === "number" ? "0" : "";
+        input.placeholder = column.placeholder;
         input.value = row[column.key] ?? "";
         input.dataset.section = sectionKey;
         input.dataset.field = column.key;

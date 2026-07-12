@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Survey Form | Perkom Indah Murni</title>
+  <meta name="description"
+    content="Form survey project untuk membuat dokumen Excel dan PDF sesuai format survey Perkom." />
+  <link rel="icon" type="image/png" href="assets/images/favicon.png" />
+  <link rel="shortcut icon" type="image/png" href="assets/images/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/images/perkom-logo.png" />
+  <meta id="themeColorMeta" name="theme-color" content="#101010" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script defer src="project-survey.js"></script>
+</head>
+
+<body class="survey-page">
+  <main class="page-shell survey-shell">
+    <div class="page-container survey-container">
+      <header class="profile-card survey-hero">
+        <div class="profile-top">
+          <a class="survey-back-link" href="index.html" aria-label="Back to Internal Link Portal">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          </a>
+
+          <div class="company-logo">
+            <img src="assets/images/perkom-logo.png" alt="Logo Perusahaan" />
+          </div>
+
+          <div>
+            <p class="company-name">Perkom Indah Murni</p>
+            <h1>Project Survey Form</h1>
+          </div>
+        </div>
+
+        <div class="profile-divider"></div>
+
+        <p class="profile-description">
+          Isi data survey project untuk menghasilkan dokumen Excel dan PDF dengan format survey project Perkom.
+        </p>
+      </header>
+
+      <form id="surveyForm" class="survey-form">
+        <section class="survey-card">
+          <div class="survey-card-header">
+            <h2>Informasi Survey</h2>
+          </div>
+
+          <div class="survey-field-grid">
+            <label>
+              <span>Tanggal Survey</span>
+              <input id="surveyDate" name="surveyDate" type="date" required />
+            </label>
+
+            <label>
+              <span>Nama Surveyor</span>
+              <input id="surveyorName" name="surveyorName" type="text" required />
+            </label>
+
+            <label>
+              <span>Nama Customer</span>
+              <input id="customerName" name="customerName" type="text" required />
+            </label>
+
+            <label>
+              <span>PIC Customer</span>
+              <input id="customerPic" name="customerPic" type="text" required />
+            </label>
+
+            <label class="survey-field-wide">
+              <span>Nama Project</span>
+              <input id="projectName" name="projectName" type="text" required />
+            </label>
+          </div>
+        </section>
+
+        <section class="survey-card" data-section="pulls">
+          <div class="survey-card-header">
+            <h2>A. Tarikan Kabel</h2>
+            <button class="survey-icon-button" type="button" data-add-row="pulls" aria-label="Tambah tarikan kabel">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="survey-table-wrap">
+            <div class="survey-table survey-table-pulls" id="pullRows"></div>
+          </div>
+        </section>
+
+        <section class="survey-card" data-section="activeDevices">
+          <div class="survey-card-header">
+            <h2>B. Perangkat Aktif</h2>
+            <button class="survey-icon-button" type="button" data-add-row="activeDevices" aria-label="Tambah perangkat aktif">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="survey-table-wrap">
+            <div class="survey-table survey-table-items" id="activeDeviceRows"></div>
+          </div>
+        </section>
+
+        <section class="survey-card" data-section="materials">
+          <div class="survey-card-header">
+            <h2>C. Material</h2>
+            <button class="survey-icon-button" type="button" data-add-row="materials" aria-label="Tambah material">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="survey-table-wrap">
+            <div class="survey-table survey-table-items" id="materialRows"></div>
+          </div>
+        </section>
+
+        <section class="survey-card" data-section="extras">
+          <div class="survey-card-header">
+            <h2>D. Pekerjaan Tambahan</h2>
+            <button class="survey-icon-button" type="button" data-add-row="extras" aria-label="Tambah pekerjaan tambahan">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="survey-table-wrap">
+            <div class="survey-table survey-table-items" id="extraRows"></div>
+          </div>
+        </section>
+
+        <section class="survey-actions" aria-label="Download survey files">
+          <button class="survey-primary-action" type="button" id="downloadExcel">
+            <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
+            <span>Download Excel</span>
+          </button>
+
+          <button class="survey-primary-action" type="button" id="downloadPdf">
+            <i class="bi bi-filetype-pdf" aria-hidden="true"></i>
+            <span>Download PDF</span>
+          </button>
+        </section>
+
+        <p id="formStatus" class="survey-status" role="status" aria-live="polite"></p>
+      </form>
+
+      <footer class="footer">
+        <p>© 2026 Perkom Link Portal</p>
+        <p>Developed by Wahyu</p>
+        <div class="theme-switch" role="group" aria-label="Theme preference">
+          <span id="themeSwitchLabel" class="theme-switch-label">Dark</span>
+          <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to light theme"
+            aria-pressed="false">
+            <i id="themeToggleIcon" class="bi bi-moon-fill" aria-hidden="true"></i>
+          </button>
+        </div>
+      </footer>
+    </div>
+  </main>
+</body>
+
+</html>

@@ -45,6 +45,14 @@ document.addEventListener("DOMContentLoaded", () => {
       badge: "",
     },
     {
+      name: "Project Survey Form",
+      category: "Form",
+      description: "Form survey project cabling",
+      icon: "bi-file-earmark-text",
+      url: "project-survey.html",
+      badge: "",
+    },
+    {
       name: "Project Quotation Progress",
       category: "Update",
       description: "Update progress penawaran project cabling",

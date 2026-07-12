@@ -1,4 +1,5 @@
 const THEME_STORAGE_KEY = "linkPortalTheme";
+const SURVEY_STORAGE_KEY = "projectSurveyFormDraft";
 
 (() => {
   try {
@@ -88,6 +89,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const themeToggleIcon = document.getElementById("themeToggleIcon");
   const themeColorMeta = document.getElementById("themeColorMeta");
   const formStatus = document.getElementById("formStatus");
+  const savedSurveyPanel = document.getElementById("savedSurveyPanel");
+  const savedSurveyList = document.getElementById("savedSurveyList");
 
   function itemColumns() {
     return [
@@ -127,11 +130,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function initializeForm() {
-    document.getElementById("surveyDate").value = state.surveyDate;
-    document.getElementById("surveyorName").value = state.surveyorName;
-    document.getElementById("customerName").value = state.customerName;
-    document.getElementById("customerPic").value = state.customerPic;
-    document.getElementById("projectName").value = state.projectName;
+    document.getElementById("surveyDate").value = state.surveyDate ?? "";
+    document.getElementById("surveyorName").value = state.surveyorName ?? "";
+    document.getElementById("customerName").value = state.customerName ?? "";
+    document.getElementById("customerPic").value = state.customerPic ?? "";
+    document.getElementById("projectName").value = state.projectName ?? "";
     renderAllSections();
   }
 
@@ -164,10 +167,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const label = document.createElement("label");
         label.className = "survey-row-field";
 
-        const labelText = document.createElement("span");
-        labelText.className = "survey-row-label";
-        labelText.textContent = column.label;
-
         const input = document.createElement("input");
         input.type = column.input;
         input.inputMode = column.input === "number" ? "decimal" : "text";
@@ -177,7 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
         input.dataset.field = column.key;
         input.setAttribute("aria-label", `${column.label} ${rowIndex + 1}`);
 
-        label.append(labelText, input);
+        label.append(input);
         rowElement.appendChild(label);
       });
 
@@ -208,6 +207,20 @@ document.addEventListener("DOMContentLoaded", () => {
       row[column.key] = "";
       return row;
     }, {});
+  }
+
+  function createEmptySurvey() {
+    return {
+      surveyDate: "",
+      surveyorName: "",
+      customerName: "",
+      customerPic: "",
+      projectName: "",
+      pulls: [emptyRow(sectionConfig.pulls.columns)],
+      activeDevices: [emptyRow(sectionConfig.activeDevices.columns)],
+      materials: [emptyRow(sectionConfig.materials.columns)],
+      extras: [emptyRow(sectionConfig.extras.columns)],
+    };
   }
 
   function collectFormData() {
@@ -258,6 +271,198 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function syncStateFromForm() {
     state = collectFormData();
+  }
+
+  function saveSurvey() {
+    syncStateFromForm();
+
+    try {
+      const savedSurveys = readSavedSurveys();
+      const draft = {
+        id: createDraftId(),
+        savedAt: new Date().toISOString(),
+        data: cloneSurvey(state),
+      };
+
+      savedSurveys.unshift(draft);
+      writeSavedSurveys(savedSurveys);
+      renderSavedSurveys(savedSurveys);
+      savedSurveyPanel.hidden = false;
+      setStatus("Draft survey berhasil disimpan.");
+    } catch {
+      setStatus("Draft survey belum bisa disimpan di browser ini.");
+    }
+  }
+
+  function loadSurvey() {
+    try {
+      const savedSurveys = readSavedSurveys();
+      renderSavedSurveys(savedSurveys);
+      savedSurveyPanel.hidden = false;
+
+      if (!savedSurveys.length) {
+        setStatus("Belum ada draft survey yang tersimpan.");
+        return;
+      }
+
+      setStatus("Pilih draft survey yang ingin dimuat.");
+    } catch {
+      setStatus("Draft survey tersimpan tidak bisa dibaca.");
+    }
+  }
+
+  function resetSurvey() {
+    state = createEmptySurvey();
+    initializeForm();
+    savedSurveyPanel.hidden = true;
+    setStatus("Form survey sudah dikosongkan.");
+  }
+
+  function normalizeSurvey(savedSurvey) {
+    const fallback = createEmptySurvey();
+    const normalized = {
+      ...fallback,
+      ...(savedSurvey && typeof savedSurvey === "object" ? savedSurvey : {}),
+    };
+
+    Object.keys(sectionConfig).forEach((sectionKey) => {
+      normalized[sectionKey] = Array.isArray(normalized[sectionKey])
+        ? normalized[sectionKey]
+        : fallback[sectionKey];
+    });
+
+    return normalized;
+  }
+
+  function readSavedSurveys() {
+    const savedSurvey = localStorage.getItem(SURVEY_STORAGE_KEY);
+
+    if (!savedSurvey) {
+      return [];
+    }
+
+    const parsed = JSON.parse(savedSurvey);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter((draft) => draft && typeof draft === "object")
+        .map((draft, index) => ({
+          id: draft.id || `saved-survey-${index}`,
+          savedAt: draft.savedAt || "",
+          data: normalizeSurvey(draft.data),
+        }));
+    }
+
+    return [
+      {
+        id: "legacy-saved-survey",
+        savedAt: "",
+        data: normalizeSurvey(parsed),
+      },
+    ];
+  }
+
+  function writeSavedSurveys(savedSurveys) {
+    localStorage.setItem(SURVEY_STORAGE_KEY, JSON.stringify(savedSurveys));
+  }
+
+  function renderSavedSurveys(savedSurveys = readSavedSurveys()) {
+    const fragment = document.createDocumentFragment();
+
+    if (!savedSurveys.length) {
+      const emptyState = document.createElement("p");
+      emptyState.className = "survey-saved-empty";
+      emptyState.textContent = "Belum ada form tersimpan.";
+      fragment.appendChild(emptyState);
+      savedSurveyList.replaceChildren(fragment);
+      return;
+    }
+
+    savedSurveys.forEach((draft) => {
+      const item = document.createElement("article");
+      item.className = "survey-saved-item";
+
+      const text = document.createElement("div");
+      text.className = "survey-saved-text";
+
+      const title = document.createElement("h3");
+      title.textContent = savedSurveyTitle(draft);
+
+      const meta = document.createElement("p");
+      meta.textContent = draft.savedAt ? `Saved ${formatSavedAt(draft.savedAt)}` : "Saved draft";
+
+      text.append(title, meta);
+
+      const loadButton = document.createElement("button");
+      loadButton.className = "survey-list-action";
+      loadButton.type = "button";
+      loadButton.dataset.loadSaved = draft.id;
+      loadButton.innerHTML = `<i class="bi bi-folder2-open" aria-hidden="true"></i><span>Load</span>`;
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "survey-list-action survey-list-action-danger";
+      deleteButton.type = "button";
+      deleteButton.dataset.deleteSaved = draft.id;
+      deleteButton.innerHTML = `<i class="bi bi-trash" aria-hidden="true"></i><span>Hapus</span>`;
+
+      item.append(text, loadButton, deleteButton);
+      fragment.appendChild(item);
+    });
+
+    savedSurveyList.replaceChildren(fragment);
+  }
+
+  function loadSavedSurvey(draftId) {
+    const savedSurveys = readSavedSurveys();
+    const draft = savedSurveys.find((item) => item.id === draftId);
+
+    if (!draft) {
+      renderSavedSurveys(savedSurveys);
+      setStatus("Draft survey tidak ditemukan.");
+      return;
+    }
+
+    state = normalizeSurvey(draft.data);
+    initializeForm();
+    savedSurveyPanel.hidden = true;
+    setStatus(`${savedSurveyTitle(draft)} berhasil dimuat.`);
+  }
+
+  function deleteSavedSurvey(draftId) {
+    const savedSurveys = readSavedSurveys();
+    const nextSurveys = savedSurveys.filter((draft) => draft.id !== draftId);
+
+    writeSavedSurveys(nextSurveys);
+    renderSavedSurveys(nextSurveys);
+    setStatus("Draft survey berhasil dihapus.");
+  }
+
+  function savedSurveyTitle(draft) {
+    const data = draft.data || {};
+    const surveyDate = formatSurveyDate(data.surveyDate) || "No date";
+    const projectName = data.projectName || "Untitled project";
+
+    return `${surveyDate} - ${projectName}`;
+  }
+
+  function formatSavedAt(value) {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return date.toLocaleString("id-ID", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  }
+
+  function createDraftId() {
+    if (globalThis.crypto?.randomUUID) {
+      return globalThis.crypto.randomUUID();
+    }
+
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 
   function validateSurvey(data) {
@@ -963,6 +1168,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderSection(sectionKey);
     });
+  });
+
+  document.getElementById("saveSurvey").addEventListener("click", saveSurvey);
+  document.getElementById("loadSurvey").addEventListener("click", loadSurvey);
+  document.getElementById("resetSurvey").addEventListener("click", resetSurvey);
+  savedSurveyList.addEventListener("click", (event) => {
+    const actionButton = event.target instanceof Element
+      ? event.target.closest("[data-load-saved], [data-delete-saved]")
+      : null;
+
+    if (!actionButton) {
+      return;
+    }
+
+    const loadId = actionButton.getAttribute("data-load-saved");
+    const deleteId = actionButton.getAttribute("data-delete-saved");
+
+    if (loadId) {
+      loadSavedSurvey(loadId);
+    }
+
+    if (deleteId) {
+      deleteSavedSurvey(deleteId);
+    }
   });
 
   document.getElementById("downloadExcel").addEventListener("click", async () => {

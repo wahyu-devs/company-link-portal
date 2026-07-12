@@ -21,28 +21,29 @@
 </head>
 
 <body class="survey-page">
-  <main class="page-shell survey-shell">
-    <div class="page-container survey-container">
-      <header class="profile-card survey-hero">
+  <main class="page-shell">
+    <div class="page-container">
+      <header class="profile-card">
         <div class="profile-top">
-          <a class="survey-back-link" href="index.html" aria-label="Back to Internal Link Portal">
-            <i class="bi bi-arrow-left" aria-hidden="true"></i>
-          </a>
-
           <div class="company-logo">
             <img src="assets/images/perkom-logo.png" alt="Logo Perusahaan" />
           </div>
 
-          <div>
+          <div class="profile-title">
             <p class="company-name">Perkom Indah Murni</p>
             <h1>Project Survey Form</h1>
           </div>
+
+          <a class="survey-home-button" href="index.html" aria-label="Back to home">
+            <i class="bi bi-house-door" aria-hidden="true"></i>
+            <span>Back to Home</span>
+          </a>
         </div>
 
         <div class="profile-divider"></div>
 
         <p class="profile-description">
-          Isi data survey project untuk menghasilkan dokumen Excel dan PDF dengan format survey project Perkom.
+          Capture project survey details and export polished Excel or PDF files in the standard Perkom format.
         </p>
       </header>
 
@@ -132,7 +133,22 @@
           </div>
         </section>
 
-        <section class="survey-actions" aria-label="Download survey files">
+        <section class="survey-actions" aria-label="Survey form actions">
+          <button class="survey-primary-action" type="button" id="saveSurvey">
+            <i class="bi bi-save" aria-hidden="true"></i>
+            <span>Save</span>
+          </button>
+
+          <button class="survey-primary-action" type="button" id="loadSurvey">
+            <i class="bi bi-folder2-open" aria-hidden="true"></i>
+            <span>Load</span>
+          </button>
+
+          <button class="survey-primary-action" type="button" id="resetSurvey">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+            <span>Reset</span>
+          </button>
+
           <button class="survey-primary-action" type="button" id="downloadExcel">
             <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
             <span>Download Excel</span>
@@ -142,6 +158,13 @@
             <i class="bi bi-filetype-pdf" aria-hidden="true"></i>
             <span>Download PDF</span>
           </button>
+        </section>
+
+        <section class="survey-saved-panel" id="savedSurveyPanel" aria-label="Saved survey forms" hidden>
+          <div class="survey-saved-header">
+            <h2>Saved Forms</h2>
+          </div>
+          <div class="survey-saved-list" id="savedSurveyList"></div>
         </section>
 
         <p id="formStatus" class="survey-status" role="status" aria-live="polite"></p>

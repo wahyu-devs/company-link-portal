@@ -216,8 +216,42 @@ button {
   object-fit: contain;
 }
 
-.profile-top > div:last-child {
+.profile-top > div:last-child,
+.profile-title {
   min-width: 0;
+}
+
+.survey-home-button {
+  margin-left: auto;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.survey-home-button:hover {
+  background: var(--control-hover);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.survey-home-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
 .company-name {
@@ -711,43 +745,6 @@ h1 {
   }
 }
 
-.survey-shell {
-  padding-bottom: 34px;
-}
-
-.survey-container {
-  max-width: 980px;
-}
-
-.survey-hero h1 {
-  font-size: 20px;
-  line-height: 1.25;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.survey-back-link {
-  width: 38px;
-  height: 38px;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
-  background: var(--surface-soft);
-  color: var(--text-muted);
-  transition:
-    background-color 180ms ease,
-    border-color 180ms ease,
-    color 180ms ease;
-}
-
-.survey-back-link:hover {
-  background: var(--control-hover);
-  border-color: var(--border-strong);
-  color: var(--text);
-}
-
 .survey-form {
   margin-top: var(--stack-gap);
   display: grid;
@@ -755,7 +752,8 @@ h1 {
 }
 
 .survey-card,
-.survey-actions {
+.survey-actions,
+.survey-saved-panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
@@ -789,12 +787,12 @@ h1 {
 
 .survey-field-grid label,
 .survey-row-field {
-  display: grid;
-  gap: 8px;
+  display: block;
 }
 
-.survey-field-grid span,
-.survey-row-label {
+.survey-field-grid span {
+  display: block;
+  margin-bottom: 8px;
   font-size: 13px;
   line-height: 1.35;
   font-weight: 600;
@@ -828,7 +826,8 @@ h1 {
 
 .survey-icon-button,
 .survey-remove-row,
-.survey-primary-action {
+.survey-primary-action,
+.survey-list-action {
   appearance: none;
   border: 1px solid var(--border);
   cursor: pointer;
@@ -853,7 +852,8 @@ h1 {
 
 .survey-icon-button:hover,
 .survey-remove-row:hover,
-.survey-primary-action:hover {
+.survey-primary-action:hover,
+.survey-list-action:hover {
   background: var(--control-hover);
   border-color: var(--border-strong);
   color: var(--text);
@@ -893,11 +893,11 @@ h1 {
 }
 
 .survey-row-header span {
+  text-align: left;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.35;
   font-weight: 700;
-  text-transform: uppercase;
 }
 
 .survey-row-number {
@@ -935,6 +935,89 @@ h1 {
   font-weight: 700;
 }
 
+.survey-saved-panel {
+  padding: 16px;
+}
+
+.survey-saved-panel[hidden] {
+  display: none;
+}
+
+.survey-saved-header {
+  margin-bottom: 12px;
+}
+
+.survey-saved-header h2,
+.survey-saved-text h3,
+.survey-saved-empty {
+  margin: 0;
+}
+
+.survey-saved-header h2 {
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.survey-saved-list {
+  display: grid;
+  gap: 10px;
+}
+
+.survey-saved-item {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  background: var(--surface-soft);
+}
+
+.survey-saved-text {
+  min-width: 0;
+}
+
+.survey-saved-text h3 {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.survey-saved-text p,
+.survey-saved-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.survey-saved-text p {
+  margin: 4px 0 0;
+}
+
+.survey-list-action {
+  min-height: 38px;
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.survey-list-action-danger:hover {
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #fca5a5;
+}
+
 .survey-status {
   min-height: 20px;
   margin: 0 2px;
@@ -956,27 +1039,38 @@ h1 {
     padding: 20px;
   }
 
+  .survey-saved-panel {
+    padding: 20px;
+  }
+
+  .survey-saved-item {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+  }
+
   .survey-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     padding: 16px;
   }
 }
 
 @media (max-width: 640px) {
-  .survey-hero .profile-top {
-    align-items: flex-start;
-  }
-
-  .survey-hero h1 {
-    font-size: 18px;
-  }
-
-  .survey-back-link {
-    width: 34px;
-    height: 34px;
+  .survey-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .survey-card {
     padding: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .survey-home-button {
+    width: 38px;
+    padding: 0;
+  }
+
+  .survey-home-button span {
+    display: none;
   }
 }

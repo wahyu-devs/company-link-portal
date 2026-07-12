@@ -61,12 +61,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const themeSwitchLabel = document.getElementById("themeSwitchLabel");
   const themeToggleIcon = document.getElementById("themeToggleIcon");
   const themeColorMeta = document.getElementById("themeColorMeta");
-  const formStatus = document.getElementById("formStatus");
-  const savedSurveyPanel = document.getElementById("savedSurveyPanel");
+  const surveyToast = document.getElementById("surveyToast");
+  const savedSurveyModal = document.getElementById("savedSurveyModal");
+  const savedSurveyClose = document.getElementById("savedSurveyClose");
   const savedSurveyList = document.getElementById("savedSurveyList");
   const pageLoader = document.getElementById("pageLoader");
   const LOADER_MIN_DURATION = 2000;
   const loaderStartedAt = performance.now();
+  let toastTimeoutId;
 
   function itemColumns() {
     return [
@@ -263,7 +265,6 @@ document.addEventListener("DOMContentLoaded", () => {
       savedSurveys.unshift(draft);
       writeSavedSurveys(savedSurveys);
       renderSavedSurveys(savedSurveys);
-      savedSurveyPanel.hidden = false;
       setStatus("Draft survey berhasil disimpan.");
     } catch {
       setStatus("Draft survey belum bisa disimpan di browser ini.");
@@ -274,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const savedSurveys = readSavedSurveys();
       renderSavedSurveys(savedSurveys);
-      savedSurveyPanel.hidden = false;
+      openSavedSurveyModal();
 
       if (!savedSurveys.length) {
         setStatus("Belum ada draft survey yang tersimpan.");
@@ -290,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function resetSurvey() {
     state = createEmptySurvey();
     initializeForm();
-    savedSurveyPanel.hidden = true;
+    closeSavedSurveyModal();
     setStatus("Form survey sudah dikosongkan.");
   }
 
@@ -399,7 +400,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     state = normalizeSurvey(draft.data);
     initializeForm();
-    savedSurveyPanel.hidden = true;
+    closeSavedSurveyModal();
     setStatus(`${savedSurveyTitle(draft)} berhasil dimuat.`);
   }
 
@@ -462,8 +463,44 @@ document.addEventListener("DOMContentLoaded", () => {
     return true;
   }
 
+  function openSavedSurveyModal() {
+    savedSurveyModal.hidden = false;
+    savedSurveyClose?.focus();
+  }
+
+  function closeSavedSurveyModal() {
+    savedSurveyModal.hidden = true;
+  }
+
   function setStatus(message) {
-    formStatus.textContent = message;
+    clearTimeout(toastTimeoutId);
+
+    if (!message) {
+      hideStatusToast();
+      return;
+    }
+
+    surveyToast.textContent = message;
+    surveyToast.hidden = false;
+    requestAnimationFrame(() => {
+      surveyToast.classList.add("is-visible");
+    });
+
+    toastTimeoutId = setTimeout(hideStatusToast, 3600);
+  }
+
+  function hideStatusToast() {
+    clearTimeout(toastTimeoutId);
+    surveyToast.classList.remove("is-visible");
+    surveyToast.addEventListener(
+      "transitionend",
+      () => {
+        if (!surveyToast.classList.contains("is-visible")) {
+          surveyToast.hidden = true;
+        }
+      },
+      { once: true }
+    );
   }
 
   function hidePageLoader() {
@@ -1177,6 +1214,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (deleteId) {
       deleteSavedSurvey(deleteId);
+    }
+  });
+  savedSurveyClose.addEventListener("click", closeSavedSurveyModal);
+  savedSurveyModal.addEventListener("click", (event) => {
+    const closeButton = event.target instanceof Element
+      ? event.target.closest("[data-close-saved-modal]")
+      : null;
+
+    if (closeButton) {
+      closeSavedSurveyModal();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !savedSurveyModal.hidden) {
+      closeSavedSurveyModal();
     }
   });
 

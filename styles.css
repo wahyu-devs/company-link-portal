@@ -832,7 +832,9 @@ h1 {
 .survey-add-row,
 .survey-remove-row,
 .survey-primary-action,
-.survey-list-action {
+.survey-list-action,
+.survey-modal-backdrop,
+.survey-modal-close {
   appearance: none;
   border: 1px solid var(--border);
   cursor: pointer;
@@ -871,7 +873,8 @@ h1 {
 .survey-add-row:hover,
 .survey-remove-row:hover,
 .survey-primary-action:hover,
-.survey-list-action:hover {
+.survey-list-action:hover,
+.survey-modal-close:hover {
   background: var(--control-hover);
   border-color: var(--border-strong);
   color: var(--text);
@@ -953,16 +956,42 @@ h1 {
   font-weight: 700;
 }
 
-.survey-saved-panel {
-  padding: 16px;
+.survey-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  padding: 18px;
+  display: grid;
+  place-items: center;
 }
 
-.survey-saved-panel[hidden] {
+.survey-modal[hidden] {
   display: none;
+}
+
+.survey-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.62);
+}
+
+.survey-modal-panel {
+  position: relative;
+  width: min(100%, 560px);
+  max-height: min(78vh, 620px);
+  padding: 16px;
+  overflow: auto;
+  box-shadow: var(--shadow-soft);
 }
 
 .survey-saved-header {
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .survey-saved-header h2,
@@ -976,6 +1005,16 @@ h1 {
   line-height: 1.35;
   font-weight: 700;
   color: var(--text);
+}
+
+.survey-modal-close {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
 }
 
 .survey-saved-list {
@@ -1036,12 +1075,34 @@ h1 {
   color: #fca5a5;
 }
 
-.survey-status {
-  min-height: 20px;
-  margin: 0 2px;
-  color: var(--text-muted);
+.survey-toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 9500;
+  width: min(calc(100vw - 36px), 380px);
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  color: var(--text);
   font-size: 13px;
   line-height: 1.45;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.survey-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.survey-toast[hidden] {
+  display: none;
 }
 
 @media (min-width: 760px) {

@@ -171,15 +171,24 @@
           </button>
         </section>
 
-        <section class="survey-saved-panel" id="savedSurveyPanel" aria-label="Saved survey forms" hidden>
+      </form>
+
+      <div class="survey-modal" id="savedSurveyModal" role="dialog" aria-modal="true"
+        aria-labelledby="savedSurveyTitle" hidden>
+        <button class="survey-modal-backdrop" type="button" data-close-saved-modal aria-label="Tutup daftar form tersimpan"></button>
+
+        <section class="survey-saved-panel survey-modal-panel" id="savedSurveyPanel" aria-label="Saved survey forms">
           <div class="survey-saved-header">
-            <h2>Saved Forms</h2>
+            <h2 id="savedSurveyTitle">Saved Forms</h2>
+            <button class="survey-modal-close" type="button" id="savedSurveyClose" aria-label="Tutup daftar form tersimpan">
+              <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
           </div>
           <div class="survey-saved-list" id="savedSurveyList"></div>
         </section>
+      </div>
 
-        <p id="formStatus" class="survey-status" role="status" aria-live="polite"></p>
-      </form>
+      <div id="surveyToast" class="survey-toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 
       <footer class="footer">
         <p>© 2026 Perkom Link Portal</p>

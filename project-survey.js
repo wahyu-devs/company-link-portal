@@ -149,6 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const surveyToast = document.getElementById("surveyToast");
   const savedSurveyModal = document.getElementById("savedSurveyModal");
   const savedSurveyClose = document.getElementById("savedSurveyClose");
+  const savedSurveySearch = document.getElementById("savedSurveySearch");
   const savedSurveyList = document.getElementById("savedSurveyList");
   const pageLoader = document.getElementById("pageLoader");
   const LOADER_MIN_DURATION = 2000;
@@ -588,8 +589,9 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem(SURVEY_STORAGE_KEY, JSON.stringify(savedSurveys));
   }
 
-  function renderSavedSurveys(savedSurveys = readSavedSurveys()) {
+  function renderSavedSurveys(savedSurveys = readSavedSurveys(), query = savedSurveySearch.value) {
     const fragment = document.createDocumentFragment();
+    const searchQuery = query.trim().toLowerCase();
 
     if (!savedSurveys.length) {
       const emptyState = document.createElement("p");
@@ -600,7 +602,20 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    savedSurveys.forEach((draft) => {
+    const filteredSurveys = searchQuery
+      ? savedSurveys.filter((draft) => savedSurveySearchText(draft).includes(searchQuery))
+      : savedSurveys;
+
+    if (!filteredSurveys.length) {
+      const emptyState = document.createElement("p");
+      emptyState.className = "survey-saved-empty";
+      emptyState.textContent = "Saved form tidak ditemukan.";
+      fragment.appendChild(emptyState);
+      savedSurveyList.replaceChildren(fragment);
+      return;
+    }
+
+    filteredSurveys.forEach((draft) => {
       const item = document.createElement("article");
       item.className = "survey-saved-item";
 
@@ -666,6 +681,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const projectName = data.projectName || "Untitled Project";
 
     return `${customerName} - ${projectName}`;
+  }
+
+  function savedSurveySearchText(draft) {
+    const data = draft.data || {};
+    return [
+      savedSurveyTitle(draft),
+      data.customerName,
+      data.projectName,
+      draft.savedAt ? formatSavedAt(draft.savedAt) : "",
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
   }
 
   function formatSavedAt(value) {
@@ -783,7 +811,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function openSavedSurveyModal() {
     savedSurveyModal.hidden = false;
-    savedSurveyClose?.focus();
+    savedSurveySearch.value = "";
+    renderSavedSurveys();
+    savedSurveySearch?.focus();
   }
 
   function closeSavedSurveyModal() {
@@ -1583,6 +1613,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (deleteId) {
       deleteSavedSurvey(deleteId);
     }
+  });
+  savedSurveySearch.addEventListener("input", () => {
+    renderSavedSurveys(readSavedSurveys(), savedSurveySearch.value);
   });
   savedSurveyClose.addEventListener("click", closeSavedSurveyModal);
   savedSurveyModal.addEventListener("click", (event) => {

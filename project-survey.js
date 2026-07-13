@@ -44,6 +44,49 @@ document.addEventListener("DOMContentLoaded", () => {
     "Power",
   ];
   const unitOptions = ["pcs", "unit", "lot", "mtr", "kg", "btg", "roll", "pack", "node"];
+  const unitTextTokens = new Set([
+    "a",
+    "amp",
+    "ampere",
+    "btg",
+    "cm",
+    "db",
+    "g",
+    "gb",
+    "gr",
+    "inch",
+    "in",
+    "kg",
+    "km",
+    "kw",
+    "kva",
+    "l",
+    "lot",
+    "m",
+    "m2",
+    "m3",
+    "ma",
+    "mb",
+    "meter",
+    "mg",
+    "ml",
+    "mm",
+    "mm2",
+    "mm3",
+    "mtr",
+    "cm2",
+    "cm3",
+    "node",
+    "pack",
+    "pc",
+    "pcs",
+    "roll",
+    "tb",
+    "unit",
+    "v",
+    "va",
+    "w",
+  ]);
 
   const defaultSurvey = {
     surveyDate: "",
@@ -88,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const themeSwitchLabel = document.getElementById("themeSwitchLabel");
   const themeToggleIcon = document.getElementById("themeToggleIcon");
   const themeColorMeta = document.getElementById("themeColorMeta");
+  const surveyForm = document.getElementById("surveyForm");
   const surveyToast = document.getElementById("surveyToast");
   const savedSurveyModal = document.getElementById("savedSurveyModal");
   const savedSurveyClose = document.getElementById("savedSurveyClose");
@@ -277,17 +321,17 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function collectFormData() {
+  function collectFormData({ format = false } = {}) {
     const data = {
       surveyDate: document.getElementById("surveyDate").value,
-      surveyorName: document.getElementById("surveyorName").value.trim(),
-      customerName: document.getElementById("customerName").value.trim(),
-      customerPic: document.getElementById("customerPic").value.trim(),
-      projectName: document.getElementById("projectName").value.trim(),
-      pulls: collectRows("pulls"),
-      activeDevices: collectRows("activeDevices"),
-      materials: collectRows("materials"),
-      extras: collectRows("extras"),
+      surveyorName: readTextInput("surveyorName", format),
+      customerName: readTextInput("customerName", format),
+      customerPic: readTextInput("customerPic", format),
+      projectName: readTextInput("projectName", format),
+      pulls: collectRows("pulls", format),
+      activeDevices: collectRows("activeDevices", format),
+      materials: collectRows("materials", format),
+      extras: collectRows("extras", format),
     };
 
     Object.keys(sectionConfig).forEach((sectionKey) => {
@@ -299,7 +343,18 @@ document.addEventListener("DOMContentLoaded", () => {
     return data;
   }
 
-  function collectRows(sectionKey) {
+  function readTextInput(inputId, shouldFormat) {
+    const input = document.getElementById(inputId);
+    const normalized = normalizeTextValue(input.value);
+
+    if (shouldFormat) {
+      input.value = normalized;
+    }
+
+    return normalized;
+  }
+
+  function collectRows(sectionKey, shouldFormat) {
     const config = sectionConfig[sectionKey];
     const rows = Array.from(config.target.querySelectorAll(".survey-row:not(.survey-row-header)"));
 
@@ -308,7 +363,22 @@ document.addEventListener("DOMContentLoaded", () => {
       config.columns.forEach((column) => {
         const input = rowElement.querySelector(`[data-field="${column.key}"]`);
         const value = input?.value.trim() ?? "";
-        row[column.key] = column.input === "number" ? numberOrBlank(value) : value;
+
+        if (column.input === "number") {
+          row[column.key] = numberOrBlank(value);
+          return;
+        }
+
+        if (column.input === "text") {
+          const normalized = normalizeTextValue(value);
+          if (shouldFormat && input) {
+            input.value = normalized;
+          }
+          row[column.key] = normalized;
+          return;
+        }
+
+        row[column.key] = value;
       });
       return row;
     });
@@ -323,13 +393,42 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(parsed) ? parsed : "";
   }
 
-  function syncStateFromForm() {
-    state = collectFormData();
+  function normalizeTextValue(value) {
+    return value
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/[A-Za-z0-9]+/g, normalizeTextToken);
+  }
+
+  function normalizeTextToken(token) {
+    if (/^\d+$/.test(token)) {
+      return token;
+    }
+
+    const numberedUnitMatch = token.match(/^(\d+(?:[.,]\d+)?)([A-Za-z]+)$/);
+    if (numberedUnitMatch && unitTextTokens.has(numberedUnitMatch[2].toLowerCase())) {
+      return `${numberedUnitMatch[1]}${numberedUnitMatch[2].toLowerCase()}`;
+    }
+
+    const lowerToken = token.toLowerCase();
+    if (unitTextTokens.has(lowerToken)) {
+      return lowerToken;
+    }
+
+    if (/[A-Z]/.test(token) && token === token.toUpperCase()) {
+      return token;
+    }
+
+    return `${token.charAt(0).toUpperCase()}${token.slice(1).toLowerCase()}`;
+  }
+
+  function syncStateFromForm(options) {
+    state = collectFormData(options);
     return state;
   }
 
   function saveSurvey() {
-    const data = syncStateFromForm();
+    const data = syncStateFromForm({ format: true });
     if (!validateSurvey(data)) {
       return;
     }
@@ -388,6 +487,30 @@ document.addEventListener("DOMContentLoaded", () => {
       normalized[sectionKey] = Array.isArray(normalized[sectionKey])
         ? normalized[sectionKey]
         : fallback[sectionKey];
+    });
+
+    return normalizeSurveyText(normalized);
+  }
+
+  function normalizeSurveyText(survey) {
+    const normalized = cloneSurvey(survey);
+    normalized.surveyorName = normalizeTextValue(normalized.surveyorName);
+    normalized.customerName = normalizeTextValue(normalized.customerName);
+    normalized.customerPic = normalizeTextValue(normalized.customerPic);
+    normalized.projectName = normalizeTextValue(normalized.projectName);
+
+    Object.keys(sectionConfig).forEach((sectionKey) => {
+      normalized[sectionKey] = normalized[sectionKey].map((row) => {
+        const normalizedRow = { ...row };
+
+        sectionConfig[sectionKey].columns.forEach((column) => {
+          if (column.input === "text") {
+            normalizedRow[column.key] = normalizeTextValue(normalizedRow[column.key] ?? "");
+          }
+        });
+
+        return normalizedRow;
+      });
     });
 
     return normalized;
@@ -1340,6 +1463,15 @@ document.addEventListener("DOMContentLoaded", () => {
     sectionConfig[sectionKey].target.addEventListener("input", syncStateFromForm);
   });
 
+  surveyForm.addEventListener("focusout", (event) => {
+    if (!(event.target instanceof HTMLInputElement) || event.target.type !== "text") {
+      return;
+    }
+
+    event.target.value = normalizeTextValue(event.target.value);
+    syncStateFromForm();
+  });
+
   sectionConfig.pulls.target.addEventListener("change", (event) => {
     const target = event.target instanceof Element
       ? event.target.closest('[data-field="type"]')
@@ -1431,7 +1563,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("downloadExcel").addEventListener("click", async () => {
-    const data = collectFormData();
+    const data = collectFormData({ format: true });
     if (!validateSurvey(data)) {
       return;
     }
@@ -1450,7 +1582,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("downloadPdf").addEventListener("click", async () => {
-    const data = collectFormData();
+    const data = collectFormData({ format: true });
     if (!validateSurvey(data)) {
       return;
     }

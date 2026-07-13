@@ -813,7 +813,7 @@ document.addEventListener("DOMContentLoaded", () => {
     savedSurveyModal.hidden = false;
     savedSurveySearch.value = "";
     renderSavedSurveys();
-    savedSurveySearch?.focus();
+    savedSurveyClose?.focus();
   }
 
   function closeSavedSurveyModal() {

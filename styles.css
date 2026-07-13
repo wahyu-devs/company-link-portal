@@ -1115,6 +1115,14 @@ body.survey-page {
   box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
+@supports (-webkit-touch-callout: none) {
+  @media (hover: none) and (pointer: coarse) {
+    .survey-saved-search input {
+      font-size: 16px;
+    }
+  }
+}
+
 .survey-saved-list {
   display: grid;
   gap: 10px;

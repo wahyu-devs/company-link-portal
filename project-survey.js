@@ -69,6 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const LOADER_MIN_DURATION = 2000;
   const loaderStartedAt = performance.now();
   let toastTimeoutId;
+  let savedSurveySnapshot = "";
 
   function itemColumns() {
     return [
@@ -249,22 +250,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function syncStateFromForm() {
     state = collectFormData();
+    return state;
   }
 
   function saveSurvey() {
-    syncStateFromForm();
+    const data = syncStateFromForm();
+    if (!validateSurvey(data)) {
+      return;
+    }
 
     try {
       const savedSurveys = readSavedSurveys();
       const draft = {
         id: createDraftId(),
         savedAt: new Date().toISOString(),
-        data: cloneSurvey(state),
+        data: cloneSurvey(data),
       };
 
       savedSurveys.unshift(draft);
       writeSavedSurveys(savedSurveys);
       renderSavedSurveys(savedSurveys);
+      markSurveySaved(data);
       setStatus("Draft survey berhasil disimpan.", "success");
     } catch {
       setStatus("Draft survey belum bisa disimpan di browser ini.", "danger");
@@ -291,6 +297,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function resetSurvey() {
     state = createEmptySurvey();
     initializeForm();
+    savedSurveySnapshot = "";
     closeSavedSurveyModal();
     setStatus("Form survey sudah dikosongkan.", "success");
   }
@@ -400,6 +407,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     state = normalizeSurvey(draft.data);
     initializeForm();
+    markSurveySaved(state);
     closeSavedSurveyModal();
     setStatus(`${savedSurveyTitle(draft)} berhasil dimuat.`, "success");
   }
@@ -459,8 +467,79 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    const sectionRules = [
+      {
+        key: "pulls",
+        title: "Tarikan Kabel",
+        requiredFields: ["type", "length", "cable", "location"],
+      },
+      {
+        key: "activeDevices",
+        title: "Perangkat Aktif",
+        requiredFields: ["description", "qty", "unit"],
+      },
+      {
+        key: "materials",
+        title: "Material",
+        requiredFields: ["description", "qty", "unit"],
+      },
+      {
+        key: "extras",
+        title: "Pekerjaan Tambahan",
+        requiredFields: ["description", "qty", "unit"],
+      },
+    ];
+
+    for (const rule of sectionRules) {
+      const rows = data[rule.key] ?? [];
+
+      for (const [rowIndex, row] of rows.entries()) {
+        if (isEmptySurveyRow(rule.key, row)) {
+          continue;
+        }
+
+        for (const fieldKey of rule.requiredFields) {
+          if (isBlankValue(row[fieldKey])) {
+            const label = fieldLabel(rule.key, fieldKey);
+            setStatus(`${rule.title} baris ${rowIndex + 1}: ${label} wajib diisi.`, "warning");
+            focusRowInput(rule.key, rowIndex, fieldKey);
+            return false;
+          }
+        }
+      }
+    }
+
     setStatus("");
     return true;
+  }
+
+  function isEmptySurveyRow(sectionKey, row) {
+    return sectionConfig[sectionKey].columns.every((column) => isBlankValue(row[column.key]));
+  }
+
+  function isBlankValue(value) {
+    return value === "" || value === null || value === undefined;
+  }
+
+  function fieldLabel(sectionKey, fieldKey) {
+    return sectionConfig[sectionKey].columns.find((column) => column.key === fieldKey)?.label ?? fieldKey;
+  }
+
+  function focusRowInput(sectionKey, rowIndex, fieldKey) {
+    const rows = sectionConfig[sectionKey].target.querySelectorAll(".survey-row:not(.survey-row-header)");
+    rows[rowIndex]?.querySelector(`[data-field="${fieldKey}"]`)?.focus();
+  }
+
+  function markSurveySaved(data) {
+    savedSurveySnapshot = serializeSurvey(data);
+  }
+
+  function isSurveySaved(data) {
+    return Boolean(savedSurveySnapshot) && serializeSurvey(data) === savedSurveySnapshot;
+  }
+
+  function serializeSurvey(data) {
+    return JSON.stringify(data);
   }
 
   function openSavedSurveyModal() {
@@ -1261,6 +1340,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    if (!isSurveySaved(data)) {
+      setStatus("Simpan survey terlebih dahulu sebelum download.", "warning");
+      return;
+    }
+
     try {
       downloadBlob(await buildXlsx(data), buildFileName(data, "xlsx"));
       setStatus("File Excel berhasil dibuat.", "success");
@@ -1272,6 +1356,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("downloadPdf").addEventListener("click", async () => {
     const data = collectFormData();
     if (!validateSurvey(data)) {
+      return;
+    }
+
+    if (!isSurveySaved(data)) {
+      setStatus("Simpan survey terlebih dahulu sebelum download.", "warning");
       return;
     }
 

@@ -1509,13 +1509,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function buildFileName(data, extension) {
-    const projectName = data.projectName || "Project Survey";
-    const safeProjectName = projectName
+    const customerName = safeFileNamePart(data.customerName, "Customer");
+    const projectName = safeFileNamePart(data.projectName, "Project");
+
+    return `Survey Form - ${customerName} - ${projectName}.${extension}`;
+  }
+
+  function safeFileNamePart(value, fallback) {
+    return String(value || fallback)
       .replace(/[\\/:*?"<>|]+/g, "")
       .replace(/\s+/g, " ")
-      .trim();
-
-    return `Survey Form - ${safeProjectName}.${extension}`;
+      .trim() || fallback;
   }
 
   function downloadBlob(blob, fileName) {

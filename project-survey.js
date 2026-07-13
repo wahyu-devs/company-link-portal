@@ -26,6 +26,14 @@ document.addEventListener("DOMContentLoaded", () => {
     "Fiber Optic",
     "Power",
   ];
+  const networkCableOptions = ["UTP", "STP"];
+  const fiberCableOptions = [
+    "FO Indoor Multimode",
+    "FO Indoor Singlemode",
+    "FO Outdoor Multimode",
+    "FO Outdoor Singlemode",
+  ];
+  const powerCableOptions = ["Power"];
   const cableTypeOptions = [
     "UTP",
     "STP",
@@ -55,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
       columns: [
         { key: "type", label: "Jenis Tarikan", input: "select", options: pullTypeOptions },
         { key: "length", label: "Panjang (m)", input: "number" },
-        { key: "cable", label: "Tipe Kabel", input: "select", options: cableTypeOptions },
+        { key: "cable", label: "Tipe Kabel", input: "select", optionsForRow: cableOptionsForPullType },
         { key: "location", label: "Detail Lokasi", input: "text" },
         { key: "note", label: "Catatan", input: "text" },
       ],
@@ -165,7 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const label = document.createElement("label");
         label.className = "survey-row-field";
 
-        const input = createRowControl(column);
+        const input = createRowControl(column, row);
         input.value = row[column.key] ?? "";
         input.dataset.section = sectionKey;
         input.dataset.field = column.key;
@@ -190,12 +198,13 @@ document.addEventListener("DOMContentLoaded", () => {
     config.target.replaceChildren(fragment);
   }
 
-  function createRowControl(column) {
+  function createRowControl(column, row = {}) {
     if (column.input === "select") {
       const select = document.createElement("select");
+      const options = column.optionsForRow ? column.optionsForRow(row) : column.options;
       select.appendChild(new Option("", ""));
 
-      column.options.forEach((option) => {
+      options.forEach((option) => {
         select.appendChild(new Option(option, option));
       });
 
@@ -208,6 +217,36 @@ document.addEventListener("DOMContentLoaded", () => {
     input.min = column.input === "number" ? "0" : "";
 
     return input;
+  }
+
+  function cableOptionsForPullType(rowOrType) {
+    const pullType = (typeof rowOrType === "string" ? rowOrType : rowOrType.type) ?? "";
+
+    if (!pullType) {
+      return [];
+    }
+
+    if (pullType.startsWith("CCTV") || pullType.startsWith("AP") || pullType === "Data") {
+      return networkCableOptions;
+    }
+
+    if (pullType === "Fiber Optic") {
+      return fiberCableOptions;
+    }
+
+    if (pullType === "Power") {
+      return powerCableOptions;
+    }
+
+    return cableTypeOptions;
+  }
+
+  function normalizePullCable(row) {
+    const allowedCableOptions = cableOptionsForPullType(row.type);
+
+    if (!allowedCableOptions.includes(row.cable)) {
+      row.cable = "";
+    }
   }
 
   function rowNumber(number) {
@@ -1299,6 +1338,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   Object.keys(sectionConfig).forEach((sectionKey) => {
     sectionConfig[sectionKey].target.addEventListener("input", syncStateFromForm);
+  });
+
+  sectionConfig.pulls.target.addEventListener("change", (event) => {
+    const target = event.target instanceof Element
+      ? event.target.closest('[data-field="type"]')
+      : null;
+
+    if (!target) {
+      return;
+    }
+
+    const rowElement = target.closest(".survey-row");
+    const rowIndex = Number(rowElement?.dataset.rowIndex);
+
+    syncStateFromForm();
+    if (!Number.isInteger(rowIndex) || !state.pulls[rowIndex]) {
+      return;
+    }
+
+    normalizePullCable(state.pulls[rowIndex]);
+    renderSection("pulls");
   });
 
   document.querySelectorAll("[data-add-row]").forEach((button) => {

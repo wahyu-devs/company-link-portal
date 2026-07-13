@@ -17,6 +17,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const LOGO_PATH = "assets/images/project-survey-logo.png";
   const encoder = new TextEncoder();
   let logoBase64Promise;
+  const pullTypeOptions = [
+    "CCTV Indoor",
+    "CCTV Outdoor",
+    "AP Indoor",
+    "AP Outdoor",
+    "Data",
+    "Fiber Optic",
+    "Power",
+  ];
+  const cableTypeOptions = [
+    "UTP",
+    "STP",
+    "FO Indoor Multimode",
+    "FO Indoor Singlemode",
+    "FO Outdoor Multimode",
+    "FO Outdoor Singlemode",
+    "Power",
+  ];
+  const unitOptions = ["pcs", "unit", "lot", "mtr", "kg", "btg", "roll", "pack", "node"];
 
   const defaultSurvey = {
     surveyDate: "",
@@ -34,9 +53,9 @@ document.addEventListener("DOMContentLoaded", () => {
     pulls: {
       target: document.getElementById("pullRows"),
       columns: [
-        { key: "type", label: "Jenis Tarikan", input: "text" },
+        { key: "type", label: "Jenis Tarikan", input: "select", options: pullTypeOptions },
         { key: "length", label: "Panjang (m)", input: "number" },
-        { key: "cable", label: "Tipe Kabel", input: "text" },
+        { key: "cable", label: "Tipe Kabel", input: "select", options: cableTypeOptions },
         { key: "location", label: "Detail Lokasi", input: "text" },
         { key: "note", label: "Catatan", input: "text" },
       ],
@@ -75,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return [
       { key: "description", label: "Deskripsi", input: "text" },
       { key: "qty", label: "Qty", input: "number" },
-      { key: "unit", label: "Satuan", input: "text" },
+      { key: "unit", label: "Satuan", input: "select", options: unitOptions },
     ];
   }
 
@@ -146,10 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const label = document.createElement("label");
         label.className = "survey-row-field";
 
-        const input = document.createElement("input");
-        input.type = column.input;
-        input.inputMode = column.input === "number" ? "decimal" : "text";
-        input.min = column.input === "number" ? "0" : "";
+        const input = createRowControl(column);
         input.value = row[column.key] ?? "";
         input.dataset.section = sectionKey;
         input.dataset.field = column.key;
@@ -172,6 +188,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     config.target.replaceChildren(fragment);
+  }
+
+  function createRowControl(column) {
+    if (column.input === "select") {
+      const select = document.createElement("select");
+      select.appendChild(new Option("", ""));
+
+      column.options.forEach((option) => {
+        select.appendChild(new Option(option, option));
+      });
+
+      return select;
+    }
+
+    const input = document.createElement("input");
+    input.type = column.input;
+    input.inputMode = column.input === "number" ? "decimal" : "text";
+    input.min = column.input === "number" ? "0" : "";
+
+    return input;
   }
 
   function rowNumber(number) {

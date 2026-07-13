@@ -839,17 +839,26 @@ body.survey-page {
 }
 
 .survey-field-grid input[type="date"] {
+  display: flex;
+  align-items: center;
   width: 100%;
   max-width: 100%;
   inline-size: 100%;
   max-inline-size: 100%;
   min-inline-size: 0;
+  padding-block: 0;
+  line-height: normal;
   appearance: none;
   -webkit-appearance: none;
 }
 
 .survey-field-grid input[type="date"]::-webkit-date-and-time-value {
+  display: flex;
+  align-items: center;
+  min-height: 100%;
   min-width: 0;
+  margin: 0;
+  line-height: 1.2;
   text-align: left;
 }
 

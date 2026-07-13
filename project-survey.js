@@ -87,6 +87,20 @@ document.addEventListener("DOMContentLoaded", () => {
     "va",
     "w",
   ]);
+  const uppercaseTextTokens = new Set([
+    "ap",
+    "cctv",
+    "fo",
+    "hdpe",
+    "ip",
+    "lan",
+    "poe",
+    "ssid",
+    "stp",
+    "utp",
+    "vlan",
+    "wan",
+  ]);
 
   const defaultSurvey = {
     surveyDate: "",
@@ -393,10 +407,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(parsed) ? parsed : "";
   }
 
-  function normalizeTextValue(value) {
-    return value
-      .trim()
-      .replace(/\s+/g, " ")
+  function normalizeTextValue(value, { trim = true, collapseWhitespace = true } = {}) {
+    const text = String(value ?? "");
+    const preparedText = trim ? text.trim() : text;
+    const spacedText = collapseWhitespace ? preparedText.replace(/\s+/g, " ") : preparedText;
+
+    return spacedText
       .replace(/[A-Za-z0-9]+/g, normalizeTextToken);
   }
 
@@ -415,6 +431,10 @@ document.addEventListener("DOMContentLoaded", () => {
       return lowerToken;
     }
 
+    if (uppercaseTextTokens.has(lowerToken)) {
+      return lowerToken.toUpperCase();
+    }
+
     if (/[A-Z]/.test(token) && token === token.toUpperCase()) {
       return token;
     }
@@ -425,6 +445,27 @@ document.addEventListener("DOMContentLoaded", () => {
   function syncStateFromForm(options) {
     state = collectFormData(options);
     return state;
+  }
+
+  function normalizeTextInputRealtime(input) {
+    const cursorStart = input.selectionStart;
+    const cursorEnd = input.selectionEnd;
+    const previousLength = input.value.length;
+    const normalized = normalizeTextValue(input.value, {
+      trim: false,
+      collapseWhitespace: false,
+    });
+
+    if (input.value !== normalized) {
+      input.value = normalized;
+
+      if (cursorStart !== null && cursorEnd !== null) {
+        const cursorOffset = normalized.length - previousLength;
+        const nextStart = Math.max(0, cursorStart + cursorOffset);
+        const nextEnd = Math.max(0, cursorEnd + cursorOffset);
+        input.setSelectionRange(nextStart, nextEnd);
+      }
+    }
   }
 
   function saveSurvey() {
@@ -1459,16 +1500,13 @@ document.addEventListener("DOMContentLoaded", () => {
     URL.revokeObjectURL(url);
   }
 
-  Object.keys(sectionConfig).forEach((sectionKey) => {
-    sectionConfig[sectionKey].target.addEventListener("input", syncStateFromForm);
-  });
-
-  surveyForm.addEventListener("focusout", (event) => {
+  surveyForm.addEventListener("input", (event) => {
     if (!(event.target instanceof HTMLInputElement) || event.target.type !== "text") {
+      syncStateFromForm();
       return;
     }
 
-    event.target.value = normalizeTextValue(event.target.value);
+    normalizeTextInputRealtime(event.target);
     syncStateFromForm();
   });
 

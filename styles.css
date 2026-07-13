@@ -70,15 +70,14 @@ a {
   text-decoration: none;
 }
 
-input {
+input,
+button,
+select {
   font: inherit;
 }
 
-button {
-  font: inherit;
-}
-
-.survey-page input {
+.survey-page input,
+.survey-page select {
   font: inherit;
 }
 
@@ -777,6 +776,7 @@ h1 {
 }
 
 .survey-card-header h2 {
+  min-width: 0;
   margin: 0;
   font-size: 15px;
   line-height: 1.35;
@@ -793,6 +793,11 @@ h1 {
 .survey-field-grid label,
 .survey-row-field {
   display: block;
+  min-width: 0;
+}
+
+.survey-row-field::before {
+  display: none;
 }
 
 .survey-field-grid span {
@@ -1090,8 +1095,7 @@ h1 {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background:
-    linear-gradient(135deg, var(--surface), var(--toast-bg, var(--surface-soft)));
+  background: var(--surface);
   box-shadow: var(--shadow-soft);
   color: var(--text);
   font-size: 13px;
@@ -1171,28 +1175,187 @@ h1 {
   }
 
   .survey-actions {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     padding: 16px;
   }
 }
 
-@media (max-width: 640px) {
+@media (min-width: 1080px) {
   .survey-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns:
+      repeat(3, minmax(0, 0.95fr))
+      repeat(2, minmax(0, 1.25fr));
+  }
+
+  .survey-primary-action {
+    padding: 0 12px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1079px) {
+  .survey-table-wrap {
+    overflow: visible;
+  }
+
+  .survey-table {
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .survey-table-pulls .survey-row,
+  .survey-table-items .survey-row {
+    grid-template-columns: 1fr;
+  }
+
+  .survey-row-header {
+    display: none;
+  }
+
+  .survey-row:not(.survey-row-header) {
+    padding: 12px;
+    align-items: stretch;
+    gap: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-soft);
+  }
+
+  .survey-row-field::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-soft);
+    font-size: 12px;
+    line-height: 1.35;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .survey-row-field input,
+  .survey-row-field select,
+  .survey-row-number,
+  .survey-remove-row {
+    background: var(--surface);
+  }
+
+  .survey-row-number {
+    width: 100%;
+    height: 38px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .survey-row-number::before {
+    content: "Item ";
+    margin-right: 4px;
+    color: var(--text-soft);
+    font-weight: 600;
+  }
+
+  .survey-remove-row {
+    align-self: auto;
+    justify-self: end;
+  }
+}
+
+@media (max-width: 640px) {
+  .survey-form {
+    gap: 12px;
   }
 
   .survey-card {
     padding: 14px;
   }
+
+  .survey-card-header {
+    margin-bottom: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .survey-card-header h2 {
+    padding: 0 2px;
+  }
+
+  .survey-field-grid {
+    gap: 10px;
+  }
+
+  .survey-field-grid input,
+  .survey-row-field input,
+  .survey-row-field select {
+    height: 46px;
+    font-size: 16px;
+  }
+
+  .survey-add-row {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .survey-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .survey-primary-action {
+    min-height: 46px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .survey-modal {
+    padding: 12px;
+    place-items: end center;
+  }
+
+  .survey-modal-panel {
+    width: 100%;
+    max-height: min(86vh, 620px);
+    padding: 14px;
+    border-radius: var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-sm);
+  }
+
+  .survey-toast {
+    top: 12px;
+    width: min(calc(100vw - 24px), 380px);
+  }
 }
 
 @media (max-width: 480px) {
   .survey-home-button {
-    width: 38px;
+    width: 44px;
+    min-height: 44px;
     padding: 0;
+  }
+
+  .survey-home-button i {
+    font-size: 26px;
   }
 
   .survey-home-button span {
     display: none;
+  }
+
+  .survey-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .survey-primary-action {
+    justify-content: flex-start;
+    padding: 0 14px;
+  }
+
+  .survey-saved-item {
+    padding: 12px;
+  }
+
+  .survey-list-action {
+    min-height: 42px;
   }
 }

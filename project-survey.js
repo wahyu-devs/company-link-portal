@@ -230,6 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
       config.columns.forEach((column) => {
         const label = document.createElement("label");
         label.className = "survey-row-field";
+        label.dataset.label = column.label;
 
         const input = createRowControl(column, row);
         input.value = row[column.key] ?? "";

@@ -175,6 +175,10 @@ select {
   max-width: var(--container);
 }
 
+.survey-page .page-container {
+  min-width: 0;
+}
+
 .profile-card,
 .search-card,
 .link-section,
@@ -750,14 +754,20 @@ h1 {
 }
 
 .survey-form {
+  min-width: 0;
   margin-top: var(--stack-gap);
   display: grid;
   gap: var(--stack-gap);
 }
 
+body.survey-page {
+  overflow-x: hidden;
+}
+
 .survey-card,
 .survey-actions,
 .survey-saved-panel {
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
@@ -768,6 +778,7 @@ h1 {
 }
 
 .survey-card-header {
+  min-width: 0;
   margin-bottom: 14px;
   display: flex;
   align-items: center;
@@ -794,10 +805,6 @@ h1 {
 .survey-row-field {
   display: block;
   min-width: 0;
-}
-
-.survey-row-field::before {
-  display: none;
 }
 
 .survey-field-grid span {
@@ -892,7 +899,12 @@ h1 {
 }
 
 .survey-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .survey-table {
@@ -1190,74 +1202,6 @@ h1 {
   .survey-primary-action {
     padding: 0 12px;
     white-space: nowrap;
-  }
-}
-
-@media (max-width: 1079px) {
-  .survey-table-wrap {
-    overflow: visible;
-  }
-
-  .survey-table {
-    min-width: 0;
-    gap: 10px;
-  }
-
-  .survey-table-pulls .survey-row,
-  .survey-table-items .survey-row {
-    grid-template-columns: 1fr;
-  }
-
-  .survey-row-header {
-    display: none;
-  }
-
-  .survey-row:not(.survey-row-header) {
-    padding: 12px;
-    align-items: stretch;
-    gap: 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--surface-soft);
-  }
-
-  .survey-row-field::before {
-    content: attr(data-label);
-    display: block;
-    margin-bottom: 6px;
-    color: var(--text-soft);
-    font-size: 12px;
-    line-height: 1.35;
-    font-weight: 700;
-    text-align: center;
-  }
-
-  .survey-row-field input,
-  .survey-row-field select,
-  .survey-row-number,
-  .survey-remove-row {
-    background: var(--surface);
-  }
-
-  .survey-row-number {
-    width: 100%;
-    height: 38px;
-    padding: 0 12px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-  }
-
-  .survey-row-number::before {
-    content: "Item ";
-    margin-right: 4px;
-    color: var(--text-soft);
-    font-weight: 600;
-  }
-
-  .survey-remove-row {
-    align-self: auto;
-    justify-self: end;
   }
 }
 

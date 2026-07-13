@@ -662,10 +662,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function savedSurveyTitle(draft) {
     const data = draft.data || {};
-    const surveyDate = formatSurveyDate(data.surveyDate) || "No date";
-    const projectName = data.projectName || "Untitled project";
+    const customerName = data.customerName || "Unnamed Customer";
+    const projectName = data.projectName || "Untitled Project";
 
-    return `${surveyDate} - ${projectName}`;
+    return `${customerName} - ${projectName}`;
   }
 
   function formatSavedAt(value) {

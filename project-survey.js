@@ -44,49 +44,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "Power",
   ];
   const unitOptions = ["pcs", "unit", "lot", "mtr", "kg", "btg", "roll", "pack", "node"];
-  const unitTextTokens = new Set([
-    "a",
-    "amp",
-    "ampere",
-    "btg",
-    "cm",
-    "db",
-    "g",
-    "gb",
-    "gr",
-    "inch",
-    "in",
-    "kg",
-    "km",
-    "kw",
-    "kva",
-    "l",
-    "lot",
-    "m",
-    "m2",
-    "m3",
-    "ma",
-    "mb",
-    "meter",
-    "mg",
-    "ml",
-    "mm",
-    "mm2",
-    "mm3",
-    "mtr",
-    "cm2",
-    "cm3",
-    "node",
-    "pack",
-    "pc",
-    "pcs",
-    "roll",
-    "tb",
-    "unit",
-    "v",
-    "va",
-    "w",
-  ]);
   const uppercaseTextTokens = new Set([
     "ap",
     "cctv",
@@ -422,16 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return token;
     }
 
-    const numberedUnitMatch = token.match(/^(\d+(?:[.,]\d+)?)([A-Za-z]+)$/);
-    if (numberedUnitMatch && unitTextTokens.has(numberedUnitMatch[2].toLowerCase())) {
-      return `${numberedUnitMatch[1]}${numberedUnitMatch[2].toLowerCase()}`;
-    }
-
     const lowerToken = token.toLowerCase();
-    if (unitTextTokens.has(lowerToken)) {
-      return lowerToken;
-    }
-
     if (uppercaseTextTokens.has(lowerToken)) {
       return lowerToken.toUpperCase();
     }

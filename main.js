@@ -8,9 +8,15 @@ const THEME_STORAGE_KEY = "linkPortalTheme";
   } catch {
     // Keep the default dark theme if storage is unavailable.
   }
+
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
 })();
 
 document.addEventListener("DOMContentLoaded", () => {
+  scrollPageToTop();
+
   const internalLinks = [
     {
       name: "Document Proposal Project Ayana Bali",
@@ -190,6 +196,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }, remainingDelay);
   }
 
+  function scrollPageToTop() {
+    requestAnimationFrame(() => {
+      const scrollingElement = document.scrollingElement || document.documentElement;
+
+      scrollingElement.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+    });
+  }
+
   const activeTheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
 
   setTheme(activeTheme);
@@ -208,4 +226,6 @@ document.addEventListener("DOMContentLoaded", () => {
   } else {
     globalThis.addEventListener("load", hidePageLoader, { once: true });
   }
+
+  globalThis.addEventListener("pageshow", scrollPageToTop);
 });

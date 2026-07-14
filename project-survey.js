@@ -1310,6 +1310,40 @@ document.addEventListener("DOMContentLoaded", () => {
     return (crc ^ 0xffffffff) >>> 0;
   }
 
+  const PDF_LAYOUT = {
+    logo: { x: 18.4, y: 18.4, width: 132.14, height: 47.84 },
+    title: { x: 297.6, y: 92, fontSize: 14.72 },
+    metadata: { labelX: 21.16, valueX: 177.56, startY: 128.8, rowGap: 11.96, fontSize: 10.12 },
+    sectionTitle: { x: 21.16, offsetY: 13.8 },
+    table: {
+      left: 18.4,
+      firstTopY: 214.36,
+      sectionGap: 34.96,
+      headerHeight: 13.8,
+      rowHeight: 12.88,
+      doubleRowHeight: 25.76,
+      lineWidth: 0.92,
+      headerTextOffsetY: 11.04,
+      bodyTextOffsetY: 10.12,
+    },
+    fullTableWidth: 554.76,
+    itemTableWidth: 289.8,
+    pullColumns: [
+      { label: "No", width: 34.04, align: "center", key: "no" },
+      { label: "Jenis Tarikan", width: 123.28, align: "center", key: "type" },
+      { label: "Panjang (m)", width: 66.24, align: "center", key: "length" },
+      { label: "Tipe Kabel", width: 66.24, align: "center", key: "cable" },
+      { label: "Detail Lokasi", width: 132.48, align: "center", key: "location" },
+      { label: "Catatan", width: 132.48, align: "center", key: "note" },
+    ],
+    itemColumns: [
+      { label: "No", width: 34.04, align: "center", key: "no" },
+      { label: "Deskripsi", width: 123.28, align: "left", key: "description" },
+      { label: "Qty", width: 66.24, align: "center", key: "qty" },
+      { label: "Satuan", width: 66.24, align: "center", key: "unit" },
+    ],
+  };
+
   function drawPdf(data, logoDataUrl) {
     const jsPdfNamespace = globalThis.jspdf;
     if (!jsPdfNamespace?.jsPDF) {
@@ -1319,23 +1353,34 @@ document.addEventListener("DOMContentLoaded", () => {
     const doc = new jsPdfNamespace.jsPDF({
       orientation: "portrait",
       unit: "pt",
-      format: "a4",
+      format: [595.2, 841.68],
       compress: true,
     });
 
     doc.setTextColor(0, 0, 0);
-    doc.addImage(logoDataUrl || LOGO_DATA_URL, "PNG", 49.2, 53.3, 117.77, 42.64);
+    doc.addImage(
+      logoDataUrl || LOGO_DATA_URL,
+      "PNG",
+      PDF_LAYOUT.logo.x,
+      PDF_LAYOUT.logo.y,
+      PDF_LAYOUT.logo.width,
+      PDF_LAYOUT.logo.height
+    );
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(13.1);
-    doc.text("PROJECT SURVEY FORM", 297.6, 119, { align: "center" });
+    doc.setFontSize(PDF_LAYOUT.title.fontSize);
+    doc.text("PROJECT SURVEY FORM", PDF_LAYOUT.title.x, PDF_LAYOUT.title.y, {
+      align: "center",
+    });
 
     drawMetadata(doc, data);
 
-    let nextY = 228;
-    nextY = drawPullPdfSection(doc, data.pulls, nextY) + 31.16;
-    nextY = drawItemPdfSection(doc, "B. PERANGKAT AKTIF", data.activeDevices, nextY) + 31.16;
-    nextY = drawItemPdfSection(doc, "C. MATERIAL", data.materials, nextY) + 31.16;
+    let nextY = PDF_LAYOUT.table.firstTopY;
+    nextY = drawPullPdfSection(doc, data.pulls, nextY) + PDF_LAYOUT.table.sectionGap;
+    nextY = drawItemPdfSection(doc, "B. PERANGKAT AKTIF", data.activeDevices, nextY)
+      + PDF_LAYOUT.table.sectionGap;
+    nextY = drawItemPdfSection(doc, "C. MATERIAL", data.materials, nextY)
+      + PDF_LAYOUT.table.sectionGap;
     drawItemPdfSection(doc, "D. PEKERJAAN TAMBAHAN", data.extras, nextY);
 
     return doc;
@@ -1350,13 +1395,13 @@ document.addEventListener("DOMContentLoaded", () => {
       ["Nama Project", data.projectName],
     ];
 
-    doc.setFontSize(9);
+    doc.setFontSize(PDF_LAYOUT.metadata.fontSize);
     labels.forEach(([label, value], index) => {
-      const y = 151.7 + index * 10.66;
+      const y = PDF_LAYOUT.metadata.startY + index * PDF_LAYOUT.metadata.rowGap;
       doc.setFont("helvetica", "bold");
-      doc.text(label, 51.7, y);
+      doc.text(label, PDF_LAYOUT.metadata.labelX, y);
       doc.setFont("helvetica", "normal");
-      doc.text(`: ${value}`, 191.1, y);
+      doc.text(`: ${value}`, PDF_LAYOUT.metadata.valueX, y);
     });
   }
 
@@ -1364,15 +1409,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return drawPdfSection(doc, {
       title: "A. TARIKAN KABEL",
       topY,
-      width: 494.46,
-      columns: [
-        { label: "No", width: 29.52, align: "center", key: "no" },
-        { label: "Jenis Tarikan", width: 109.88, align: "center", key: "type" },
-        { label: "Panjang (m)", width: 59.04, align: "center", key: "length" },
-        { label: "Tipe Kabel", width: 59.04, align: "center", key: "cable" },
-        { label: "Detail Lokasi", width: 117.26, align: "center", key: "location" },
-        { label: "Catatan", width: 119.72, align: "center", key: "note" },
-      ],
+      width: PDF_LAYOUT.fullTableWidth,
+      columns: PDF_LAYOUT.pullColumns,
       rows: pulls.map((row, index) => ({
         no: index + 1,
         type: row.type,
@@ -1388,49 +1426,55 @@ document.addEventListener("DOMContentLoaded", () => {
     return drawPdfSection(doc, {
       title,
       topY,
-      width: 258.3,
-      columns: [
-        { label: "No", width: 29.52, align: "center", key: "no" },
-        { label: "Deskripsi", width: 109.88, align: "left", key: "description" },
-        { label: "Qty", width: 59.04, align: "center", key: "qty" },
-        { label: "Satuan", width: 59.86, align: "center", key: "unit" },
-      ],
+      width: PDF_LAYOUT.itemTableWidth,
+      columns: PDF_LAYOUT.itemColumns,
       rows: items.map((row, index) => ({
         no: index + 1,
         description: row.description,
         qty: row.qty,
         unit: row.unit,
       })),
-      getRowHeight: (row) => String(row.description ?? "").length > 24 ? 22.96 : 11.48,
+      getRowHeight: (row) => String(row.description ?? "").length > 24
+        ? PDF_LAYOUT.table.doubleRowHeight
+        : PDF_LAYOUT.table.rowHeight,
     });
   }
 
   function drawPdfSection(doc, config) {
-    const left = 49.2;
-    const headerHeight = 12.3;
-    const defaultRowHeight = 11.48;
+    const left = PDF_LAYOUT.table.left;
+    const headerHeight = PDF_LAYOUT.table.headerHeight;
+    const defaultRowHeight = PDF_LAYOUT.table.rowHeight;
     const rows = config.rows.length ? config.rows : [{}];
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
+    doc.setFontSize(10.12);
     doc.setTextColor(0, 0, 0);
-    doc.text(config.title, 51.7, config.topY - 12.3);
+    doc.text(
+      config.title,
+      PDF_LAYOUT.sectionTitle.x,
+      config.topY - PDF_LAYOUT.sectionTitle.offsetY
+    );
 
     doc.setFillColor(31, 78, 120);
     doc.rect(left, config.topY, config.width, headerHeight, "F");
     drawGrid(doc, left, config.topY, config.width, headerHeight, config.columns);
 
     let x = left;
-    doc.setFontSize(7);
+    doc.setFontSize(10.12);
     doc.setTextColor(255, 255, 255);
     config.columns.forEach((column) => {
-      doc.text(column.label, x + column.width / 2, config.topY + 8.6, { align: "center" });
+      doc.text(
+        column.label,
+        x + column.width / 2,
+        config.topY + PDF_LAYOUT.table.headerTextOffsetY,
+        { align: "center" }
+      );
       x += column.width;
     });
 
     let rowY = config.topY + headerHeight;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.6);
+    doc.setFontSize(10.12);
     doc.setTextColor(0, 0, 0);
 
     rows.forEach((row) => {
@@ -1441,7 +1485,7 @@ document.addEventListener("DOMContentLoaded", () => {
       config.columns.forEach((column) => {
         const text = fitText(doc, row[column.key] ?? "", column.width - 5);
         const textX = column.align === "left" ? cellX + 4 : cellX + column.width / 2;
-        doc.text(String(text), textX, rowY + Math.min(8.3, rowHeight - 3), {
+        doc.text(String(text), textX, rowY + Math.min(PDF_LAYOUT.table.bodyTextOffsetY, rowHeight - 3), {
           align: column.align === "left" ? "left" : "center",
         });
         cellX += column.width;
@@ -1456,7 +1500,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function drawGrid(doc, left, top, width, height, columns) {
     doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.82);
+    doc.setLineWidth(PDF_LAYOUT.table.lineWidth);
     doc.rect(left, top, width, height);
 
     let x = left;

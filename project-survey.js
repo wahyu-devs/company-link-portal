@@ -463,7 +463,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initializeForm();
     savedSurveySnapshot = "";
     closeSavedSurveyModal();
-    setStatus("Form survey sudah dikosongkan.", "success");
+    setStatus("Dokumen baru siap diisi.", "success");
   }
 
   function normalizeSurvey(savedSurvey) {

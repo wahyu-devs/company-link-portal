@@ -1259,7 +1259,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const PDF_LAYOUT = {
-    logo: { x: 18.4, y: 18.4, width: 132.14, height: 47.84 },
+    logo: { x: 18.4, y: 18.4, width: 132.14, height: 52.19 },
     title: { x: 297.6, y: 92, fontSize: 14.72 },
     metadata: { labelX: 21.16, valueX: 177.56, startY: 128.8, rowGap: 11.96, fontSize: 10.12 },
     sectionTitle: { x: 21.16, offsetY: 13.8 },

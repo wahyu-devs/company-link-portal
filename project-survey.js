@@ -1321,10 +1321,12 @@ document.addEventListener("DOMContentLoaded", () => {
       sectionGap: 34.96,
       headerHeight: 13.8,
       rowHeight: 12.88,
-      doubleRowHeight: 25.76,
       lineWidth: 0.92,
       headerTextOffsetY: 11.04,
       bodyTextOffsetY: 10.12,
+      bodyTextBottomPadding: 2.76,
+      bodyLineHeight: 11.5,
+      cellPaddingX: 4,
     },
     fullTableWidth: 554.76,
     itemTableWidth: 289.8,
@@ -1333,12 +1335,12 @@ document.addEventListener("DOMContentLoaded", () => {
       { label: "Jenis Tarikan", width: 123.28, align: "center", key: "type" },
       { label: "Panjang (m)", width: 66.24, align: "center", key: "length" },
       { label: "Tipe Kabel", width: 66.24, align: "center", key: "cable" },
-      { label: "Detail Lokasi", width: 132.48, align: "center", key: "location" },
-      { label: "Catatan", width: 132.48, align: "center", key: "note" },
+      { label: "Detail Lokasi", width: 132.48, align: "left", key: "location" },
+      { label: "Catatan", width: 132.48, align: "left", key: "note" },
     ],
     itemColumns: [
       { label: "No", width: 34.04, align: "center", key: "no" },
-      { label: "Deskripsi", width: 123.28, align: "left", key: "description" },
+      { label: "Deskripsi", width: 123.28, align: "left", key: "description", wrap: true },
       { label: "Qty", width: 66.24, align: "center", key: "qty" },
       { label: "Satuan", width: 66.24, align: "center", key: "unit" },
     ],
@@ -1434,9 +1436,6 @@ document.addEventListener("DOMContentLoaded", () => {
         qty: row.qty,
         unit: row.unit,
       })),
-      getRowHeight: (row) => String(row.description ?? "").length > 24
-        ? PDF_LAYOUT.table.doubleRowHeight
-        : PDF_LAYOUT.table.rowHeight,
     });
   }
 
@@ -1478,16 +1477,12 @@ document.addEventListener("DOMContentLoaded", () => {
     doc.setTextColor(0, 0, 0);
 
     rows.forEach((row) => {
-      const rowHeight = config.getRowHeight ? config.getRowHeight(row) : defaultRowHeight;
+      const rowHeight = getPdfRowHeight(doc, row, config.columns, defaultRowHeight);
       drawGrid(doc, left, rowY, config.width, rowHeight, config.columns);
 
       let cellX = left;
       config.columns.forEach((column) => {
-        const text = fitText(doc, row[column.key] ?? "", column.width - 5);
-        const textX = column.align === "left" ? cellX + 4 : cellX + column.width / 2;
-        doc.text(String(text), textX, rowY + Math.min(PDF_LAYOUT.table.bodyTextOffsetY, rowHeight - 3), {
-          align: column.align === "left" ? "left" : "center",
-        });
+        drawPdfCellText(doc, row[column.key] ?? "", column, cellX, rowY, rowHeight);
         cellX += column.width;
       });
 
@@ -1496,6 +1491,51 @@ document.addEventListener("DOMContentLoaded", () => {
 
     doc.setTextColor(0, 0, 0);
     return rowY;
+  }
+
+  function getPdfRowHeight(doc, row, columns, defaultRowHeight) {
+    return columns.reduce((height, column) => {
+      if (!column.wrap) {
+        return height;
+      }
+
+      const lines = wrapPdfText(doc, row[column.key] ?? "", getPdfTextMaxWidth(column));
+      return Math.max(height, getPdfWrappedRowHeight(lines.length));
+    }, defaultRowHeight);
+  }
+
+  function getPdfWrappedRowHeight(lineCount) {
+    const safeLineCount = Math.max(1, lineCount);
+    return Math.max(
+      PDF_LAYOUT.table.rowHeight,
+      PDF_LAYOUT.table.bodyTextOffsetY
+        + ((safeLineCount - 1) * PDF_LAYOUT.table.bodyLineHeight)
+        + PDF_LAYOUT.table.bodyTextBottomPadding
+    );
+  }
+
+  function drawPdfCellText(doc, value, column, cellX, rowY, rowHeight) {
+    const align = column.align === "left" ? "left" : "center";
+    const textX = align === "left"
+      ? cellX + PDF_LAYOUT.table.cellPaddingX
+      : cellX + column.width / 2;
+    const textY = rowY + Math.min(PDF_LAYOUT.table.bodyTextOffsetY, rowHeight - 3);
+
+    if (!column.wrap) {
+      const text = fitText(doc, value, getPdfTextMaxWidth(column));
+      doc.text(String(text), textX, textY, { align });
+      return;
+    }
+
+    wrapPdfText(doc, value, getPdfTextMaxWidth(column)).forEach((line, lineIndex) => {
+      doc.text(String(line), textX, textY + (lineIndex * PDF_LAYOUT.table.bodyLineHeight), {
+        align,
+      });
+    });
+  }
+
+  function getPdfTextMaxWidth(column) {
+    return column.width - (PDF_LAYOUT.table.cellPaddingX * 2);
   }
 
   function drawGrid(doc, left, top, width, height, columns) {
@@ -1522,6 +1562,47 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     return `${text}...`;
+  }
+
+  function wrapPdfText(doc, value, maxWidth) {
+    const text = String(value ?? "");
+    if (!text) {
+      return [""];
+    }
+
+    if (typeof doc.splitTextToSize === "function") {
+      const lines = doc.splitTextToSize(text, maxWidth);
+      return Array.isArray(lines) && lines.length ? lines : [text];
+    }
+
+    return wrapPdfTextFallback(doc, text, maxWidth);
+  }
+
+  function wrapPdfTextFallback(doc, text, maxWidth) {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let currentLine = "";
+
+    words.forEach((word) => {
+      const nextLine = currentLine ? `${currentLine} ${word}` : word;
+
+      if (doc.getTextWidth(nextLine) <= maxWidth) {
+        currentLine = nextLine;
+        return;
+      }
+
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+
+      currentLine = word;
+    });
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    return lines.length ? lines : [""];
   }
 
   function formatSurveyDate(value) {

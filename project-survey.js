@@ -1289,7 +1289,7 @@ document.addEventListener("DOMContentLoaded", () => {
       sectionGap: 34.96,
       headerHeight: 13.8,
       rowHeight: 12.88,
-      lineWidth: 0.92,
+      lineWidth: 0.7,
       headerTextOffsetY: 11.04,
       bodyTextOffsetY: 10.12,
       bodyTextBottomPadding: 2.76,

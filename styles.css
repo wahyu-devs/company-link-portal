@@ -65,6 +65,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+body:not(.survey-page) {
+  --home-panel-gap: 12px;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -181,7 +185,6 @@ select {
 
 .profile-card,
 .search-card,
-.link-section,
 .footer {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -361,11 +364,23 @@ h1 {
 
 .link-section {
   margin-top: var(--stack-gap);
-  padding: 16px;
 }
 
-.section-header {
-  margin-bottom: 10px;
+.link-list {
+  display: grid;
+  gap: var(--home-panel-gap);
+}
+
+.link-category-group {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  display: grid;
+  gap: 12px;
+  background: var(--surface);
+}
+
+.link-category-header {
   padding: 0 2px;
   display: flex;
   align-items: center;
@@ -373,23 +388,24 @@ h1 {
   gap: 12px;
 }
 
-.section-header h2 {
+.link-category-header h2 {
   margin: 0;
-  font-size: 15px;
+  color: var(--text);
+  font-size: 14px;
   line-height: 1.4;
   font-weight: 500;
   letter-spacing: 0;
-  color: var(--text);
 }
 
-.section-header span {
+.link-category-header span {
   flex: 0 0 auto;
   color: var(--text-soft);
   font-size: 13px;
+  line-height: 1.4;
   font-weight: 600;
 }
 
-.link-list {
+.link-category-list {
   display: grid;
   gap: 8px;
 }
@@ -573,6 +589,12 @@ h1 {
   font-weight: 400;
 }
 
+body:not(.survey-page) .search-card,
+body:not(.survey-page) .link-section,
+body:not(.survey-page) .footer {
+  margin-top: var(--home-panel-gap);
+}
+
 .theme-switch {
   position: absolute;
   top: 50%;
@@ -663,11 +685,11 @@ h1 {
     padding: 22px;
   }
 
-  .link-section {
+  .link-category-group {
     padding: 20px;
   }
 
-  .link-list {
+  .link-category-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
@@ -731,7 +753,7 @@ h1 {
     padding: 14px;
   }
 
-  .link-section {
+  .link-category-group {
     padding: 14px;
   }
 
@@ -761,6 +783,7 @@ h1 {
 }
 
 body.survey-page {
+  --stack-gap: 12px;
   overflow-x: hidden;
 }
 

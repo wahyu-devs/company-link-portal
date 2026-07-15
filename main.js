@@ -43,6 +43,22 @@ document.addEventListener("DOMContentLoaded", () => {
       badge: "Frequently Used",
     },
     {
+      name: "Project Quotation Progress",
+      category: "Progress",
+      description: "Update progress penawaran project cabling",
+      icon: "bi-file-earmark-text",
+      url: "https://ptperkomindahmurni-my.sharepoint.com/:x:/g/personal/wahyu_perkom_co_id/IQDGbV5HQfc-R6Y7A2CpGldgAUs5nwAVrEcflySGiQMoMXQ?e=piXdKY",
+      badge: "",
+    },
+    {
+      name: "Project Progress Ayana Bali",
+      category: "Progress",
+      description: "Update progress pekerjaan project Ayana Bali",
+      icon: "bi-file-earmark-text",
+      url: "https://docs.google.com/spreadsheets/d/1INY7dGlIusZRGX0RKLKqqjtIiH4rxtKUb-7Us-DbvaI/edit?gid=1533323113#gid=1533323113",
+      badge: "",
+    },
+    {
       name: "Travel Expense Form",
       category: "Form",
       description: "Form pengajuan biaya perjalanan",
@@ -58,27 +74,10 @@ document.addEventListener("DOMContentLoaded", () => {
       url: "project-survey.html",
       badge: "",
     },
-    {
-      name: "Project Quotation Progress",
-      category: "Update",
-      description: "Update progress penawaran project cabling",
-      icon: "bi-file-earmark-text",
-      url: "https://ptperkomindahmurni-my.sharepoint.com/:x:/g/personal/wahyu_perkom_co_id/IQDGbV5HQfc-R6Y7A2CpGldgAUs5nwAVrEcflySGiQMoMXQ?e=piXdKY",
-      badge: "",
-    },
-    {
-      name: "Project Progress Ayana Bali",
-      category: "Update",
-      description: "Update progress pekerjaan project Ayana Bali",
-      icon: "bi-file-earmark-text",
-      url: "https://docs.google.com/spreadsheets/d/1INY7dGlIusZRGX0RKLKqqjtIiH4rxtKUb-7Us-DbvaI/edit?gid=1533323113#gid=1533323113",
-      badge: "",
-    },
   ];
 
   const searchInput = document.getElementById("searchInput");
   const linkList = document.getElementById("linkList");
-  const resultCount = document.getElementById("resultCount");
   const emptyState = document.getElementById("emptyState");
   const themeToggle = document.getElementById("themeToggle");
   const themeSwitchLabel = document.getElementById("themeSwitchLabel");
@@ -154,6 +153,33 @@ document.addEventListener("DOMContentLoaded", () => {
     return card;
   }
 
+  function createLinkCategory(category, links) {
+    const section = document.createElement("section");
+    section.className = "link-category-group";
+    section.setAttribute("aria-label", `${category} links`);
+
+    const header = document.createElement("div");
+    header.className = "link-category-header";
+
+    const title = document.createElement("h2");
+    title.textContent = category;
+
+    const count = document.createElement("span");
+    count.textContent = `${links.length} ${links.length === 1 ? "link" : "links"}`;
+
+    const list = document.createElement("div");
+    list.className = "link-category-list";
+
+    links.forEach((link) => {
+      list.appendChild(createLinkCard(link));
+    });
+
+    header.append(title, count);
+    section.append(header, list);
+
+    return section;
+  }
+
   function isMatch(link, keyword) {
     const searchableText = `
       ${link.name}
@@ -173,17 +199,33 @@ document.addEventListener("DOMContentLoaded", () => {
       : internalLinks;
 
     const fragment = document.createDocumentFragment();
+    const categoryGroups = groupLinksByCategory(filteredLinks);
 
-    filteredLinks.forEach((link) => {
-      fragment.appendChild(createLinkCard(link));
+    categoryGroups.forEach(({ category, links }) => {
+      fragment.appendChild(createLinkCategory(category, links));
     });
 
     linkList.replaceChildren(fragment);
-    resultCount.textContent = `${filteredLinks.length} links`;
 
     const hasResult = filteredLinks.length > 0;
     emptyState.hidden = hasResult;
     linkList.hidden = !hasResult;
+  }
+
+  function groupLinksByCategory(links) {
+    return links.reduce((groups, link) => {
+      const category = link.category || "Other";
+      let group = groups.find((item) => item.category === category);
+
+      if (!group) {
+        group = { category, links: [] };
+        groups.push(group);
+      }
+
+      group.links.push(link);
+
+      return groups;
+    }, []);
   }
 
   function hidePageLoader() {

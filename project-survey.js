@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
     "FO Outdoor Singlemode",
     "Power",
   ];
-  const unitOptions = ["pcs", "unit", "lot", "mtr", "kg", "btg", "roll", "pack", "node"];
+  const unitOptions = ["pcs", "unit", "lot", "mtr", "kg", "btg", "roll", "pack", "node", "core"];
   const uppercaseTextTokens = new Set([
     "ap",
     "cctv",

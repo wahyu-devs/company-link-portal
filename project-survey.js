@@ -50,6 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
     "Power",
   ];
   const unitOptions = ["pcs", "unit", "lot", "mtr", "kg", "btg", "roll", "pack", "node", "core"];
+  const pullUnitOptions = ["mtr", "node"];
   const uppercaseTextTokens = new Set([
     "ap",
     "cctv",
@@ -83,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
       columns: [
         { key: "type", label: "Jenis Tarikan", input: "select", options: pullTypeOptions },
         { key: "qty", label: "Qty", input: "number" },
-        { key: "unit", label: "Satuan", input: "select", options: unitOptions },
+        { key: "unit", label: "Satuan", input: "select", options: pullUnitOptions },
         { key: "cable", label: "Tipe Kabel", input: "select", optionsForRow: cableOptionsForPullType },
         { key: "location", label: "Detail Lokasi", input: "text" },
         { key: "note", label: "Catatan", input: "text" },
@@ -513,6 +514,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!migratedRow.unit && migratedRow.length !== undefined && !isBlankValue(migratedRow.qty)) {
       migratedRow.unit = "mtr";
+    }
+
+    if (migratedRow.unit && !pullUnitOptions.includes(migratedRow.unit)) {
+      migratedRow.unit = "";
     }
 
     delete migratedRow.length;

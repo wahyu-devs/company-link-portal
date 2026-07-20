@@ -945,8 +945,29 @@ document.addEventListener("DOMContentLoaded", () => {
     return String(description ?? "").length > 24 ? 30 : 15;
   }
 
+  function worksheetColumnWidth(values, { min = 18, max = 36 } = {}) {
+    const maxLength = values.reduce((width, value) => {
+      const textLength = String(value ?? "").trim().length;
+      return Math.max(width, textLength);
+    }, 0);
+
+    if (!maxLength) {
+      return min;
+    }
+
+    return Math.min(max, Math.max(min, Math.ceil(maxLength * 1.1 + 2)));
+  }
+
   function buildWorksheetXml(data) {
     const rows = [];
+    const locationColumnWidth = worksheetColumnWidth(
+      ["Detail Lokasi", ...data.pulls.map((pull) => pull.location)],
+      { min: 24, max: 42 }
+    );
+    const noteColumnWidth = worksheetColumnWidth(
+      ["Catatan", ...data.pulls.map((pull) => pull.note)],
+      { min: 24, max: 42 }
+    );
     let rowNumber = 6;
 
     rows.push(rowXml(rowNumber, [
@@ -988,7 +1009,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const lastRow = rowNumber - 1;
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac xr xr2 xr3" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xmlns:xr2="http://schemas.microsoft.com/office/spreadsheetml/2015/revision2" xmlns:xr3="http://schemas.microsoft.com/office/spreadsheetml/2016/revision3" xr:uid="{00000000-0001-0000-0000-000000000000}"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A6:G${lastRow}"/><sheetViews><sheetView tabSelected="1" zoomScale="120" zoomScaleNormal="120" workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews><sheetFormatPr baseColWidth="10" defaultColWidth="8.83203125" defaultRowHeight="14" x14ac:dyDescent="0.15"/><cols><col min="1" max="1" width="6" style="12" customWidth="1"/><col min="2" max="2" width="22.33203125" style="12" customWidth="1"/><col min="3" max="4" width="10" style="12" customWidth="1"/><col min="5" max="5" width="16" style="12" customWidth="1"/><col min="6" max="7" width="18" style="12" customWidth="1"/><col min="8" max="16384" width="8.83203125" style="12"/></cols><sheetData>${rows.join("")}</sheetData><mergeCells count="1"><mergeCell ref="A6:G6"/></mergeCells><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/><pageSetup scale="85" orientation="portrait" horizontalDpi="4294967295" verticalDpi="4294967295"/><drawing r:id="rId1"/></worksheet>`;
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac xr xr2 xr3" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xmlns:xr2="http://schemas.microsoft.com/office/spreadsheetml/2015/revision2" xmlns:xr3="http://schemas.microsoft.com/office/spreadsheetml/2016/revision3" xr:uid="{00000000-0001-0000-0000-000000000000}"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A6:G${lastRow}"/><sheetViews><sheetView tabSelected="1" zoomScale="120" zoomScaleNormal="120" workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews><sheetFormatPr baseColWidth="10" defaultColWidth="8.83203125" defaultRowHeight="14" x14ac:dyDescent="0.15"/><cols><col min="1" max="1" width="6" style="12" customWidth="1"/><col min="2" max="2" width="22.33203125" style="12" customWidth="1"/><col min="3" max="4" width="10" style="12" customWidth="1"/><col min="5" max="5" width="16" style="12" customWidth="1"/><col min="6" max="6" width="${locationColumnWidth}" style="12" customWidth="1"/><col min="7" max="7" width="${noteColumnWidth}" style="12" customWidth="1"/><col min="8" max="16384" width="8.83203125" style="12"/></cols><sheetData>${rows.join("")}</sheetData><mergeCells count="1"><mergeCell ref="A6:G6"/></mergeCells><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/><pageSetup scale="85" orientation="portrait" horizontalDpi="4294967295" verticalDpi="4294967295"/><drawing r:id="rId1"/></worksheet>`;
   }
 
   function appendPullSection(rows, rowNumber, pulls) {
@@ -1324,13 +1345,13 @@ document.addEventListener("DOMContentLoaded", () => {
     fullTableWidth: 554.76,
     itemTableWidth: 289.8,
     pullColumns: [
-      { label: "No", width: 30.36, align: "center", key: "no" },
-      { label: "Jenis Tarikan", width: 104.4, align: "center", key: "type" },
-      { label: "Qty", width: 48, align: "center", key: "qty" },
-      { label: "Satuan", width: 56, align: "center", key: "unit" },
-      { label: "Tipe Kabel", width: 88, align: "center", key: "cable", wrap: true },
-      { label: "Detail Lokasi", width: 114, align: "left", key: "location", wrap: true },
-      { label: "Catatan", width: 114, align: "left", key: "note", wrap: true },
+      { label: "No", width: 34.04, align: "center", key: "no" },
+      { label: "Jenis Tarikan", width: 123.28, align: "center", key: "type" },
+      { label: "Qty", width: 66.24, align: "center", key: "qty" },
+      { label: "Satuan", width: 66.24, align: "center", key: "unit" },
+      { label: "Tipe Kabel", width: 78, align: "center", key: "cable", wrap: true },
+      { label: "Detail Lokasi", width: 93.48, align: "left", key: "location", wrap: true },
+      { label: "Catatan", width: 93.48, align: "left", key: "note", wrap: true },
     ],
     itemColumns: [
       { label: "No", width: 34.04, align: "center", key: "no" },

@@ -59,6 +59,14 @@ document.addEventListener("DOMContentLoaded", () => {
       badge: "",
     },
     {
+      name: "Checklist Project Ballroom Ayana Bali",
+      category: "Progress",
+      description: "Checklist pekerjaan project Ballroom Ayana Bali",
+      icon: "bi-file-earmark-text",
+      url: "https://ptperkomindahmurni-my.sharepoint.com/:x:/g/personal/madeyudhi_putra_perkom_co_id/IQCzsRu4MhuLSIIDIFtm098zAZfdj-5KbRw5rkUfN4fv0w8?e=mClHv8",
+      badge: "",
+    },
+    {
       name: "Travel Expense Form",
       category: "Form",
       description: "Form pengajuan biaya perjalanan",

@@ -967,6 +967,10 @@ body.survey-page {
   gap: 8px;
 }
 
+.survey-table-pulls {
+  min-width: 980px;
+}
+
 .survey-row {
   display: grid;
   align-items: end;
@@ -974,7 +978,15 @@ body.survey-page {
 }
 
 .survey-table-pulls .survey-row {
-  grid-template-columns: 42px 1fr 120px 120px 1.15fr 1fr 44px;
+  grid-template-columns:
+    42px
+    minmax(136px, 1fr)
+    90px
+    105px
+    minmax(136px, 0.95fr)
+    minmax(160px, 1.1fr)
+    minmax(140px, 1fr)
+    44px;
 }
 
 .survey-table-items .survey-row {

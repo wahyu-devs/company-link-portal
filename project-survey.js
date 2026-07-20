@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
     customerName: "",
     customerPic: "",
     projectName: "",
-    pulls: [{ type: "", length: "", cable: "", location: "", note: "" }],
+    pulls: [{ type: "", qty: "", unit: "", cable: "", location: "", note: "" }],
     activeDevices: [{ description: "", qty: "", unit: "" }],
     materials: [{ description: "", qty: "", unit: "" }],
     extras: [{ description: "", qty: "", unit: "" }],
@@ -82,7 +82,8 @@ document.addEventListener("DOMContentLoaded", () => {
       target: document.getElementById("pullRows"),
       columns: [
         { key: "type", label: "Jenis Tarikan", input: "select", options: pullTypeOptions },
-        { key: "length", label: "Panjang (m)", input: "number" },
+        { key: "qty", label: "Qty", input: "number" },
+        { key: "unit", label: "Satuan", input: "select", options: unitOptions },
         { key: "cable", label: "Tipe Kabel", input: "select", optionsForRow: cableOptionsForPullType },
         { key: "location", label: "Detail Lokasi", input: "text" },
         { key: "note", label: "Catatan", input: "text" },
@@ -498,7 +499,24 @@ document.addEventListener("DOMContentLoaded", () => {
         : fallback[sectionKey];
     });
 
+    normalized.pulls = normalized.pulls.map(migratePullRow);
+
     return normalizeSurveyText(normalized);
+  }
+
+  function migratePullRow(row) {
+    const migratedRow = { ...(row || {}) };
+
+    if (migratedRow.qty === undefined && migratedRow.length !== undefined) {
+      migratedRow.qty = migratedRow.length;
+    }
+
+    if (!migratedRow.unit && migratedRow.length !== undefined && !isBlankValue(migratedRow.qty)) {
+      migratedRow.unit = "mtr";
+    }
+
+    delete migratedRow.length;
+    return migratedRow;
   }
 
   function normalizeSurveyText(survey) {
@@ -513,9 +531,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const normalizedRow = { ...row };
 
         sectionConfig[sectionKey].columns.forEach((column) => {
+          const value = normalizedRow[column.key] ?? "";
+
           if (column.input === "text") {
-            normalizedRow[column.key] = normalizeTextValue(normalizedRow[column.key] ?? "");
+            normalizedRow[column.key] = normalizeTextValue(value);
+            return;
           }
+
+          normalizedRow[column.key] = value;
         });
 
         return normalizedRow;
@@ -706,7 +729,7 @@ document.addEventListener("DOMContentLoaded", () => {
       {
         key: "pulls",
         title: "Tarikan Kabel",
-        requiredFields: ["type", "length", "cable", "location"],
+        requiredFields: ["type", "qty", "unit", "cable", "location"],
       },
       {
         key: "activeDevices",
@@ -894,7 +917,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return `<c ${attrs.join(" ")} t="inlineStr"><is>${xmlText(value)}</is></c>`;
   }
 
-  function blankCells(rowNumber, style, startCol = 1, endCol = 6) {
+  function blankCells(rowNumber, style, startCol = 1, endCol = 7) {
     const cells = [];
 
     for (let col = startCol; col <= endCol; col += 1) {
@@ -905,7 +928,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function rowXml(rowNumber, cells, options = {}) {
-    const attrs = [`r="${rowNumber}"`, `spans="1:6"`];
+    const attrs = [`r="${rowNumber}"`, `spans="1:7"`];
 
     if (options.height) {
       attrs.push(`ht="${options.height}"`);
@@ -928,7 +951,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     rows.push(rowXml(rowNumber, [
       cell("A6", 13, "PROJECT SURVEY FORM"),
-      ...blankCells(6, 13, 2, 6),
+      ...blankCells(6, 13, 2, 7),
     ], { height: 20 }));
     rowNumber += 1;
 
@@ -965,7 +988,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const lastRow = rowNumber - 1;
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac xr xr2 xr3" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xmlns:xr2="http://schemas.microsoft.com/office/spreadsheetml/2015/revision2" xmlns:xr3="http://schemas.microsoft.com/office/spreadsheetml/2016/revision3" xr:uid="{00000000-0001-0000-0000-000000000000}"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A6:F${lastRow}"/><sheetViews><sheetView tabSelected="1" zoomScale="120" zoomScaleNormal="120" workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews><sheetFormatPr baseColWidth="10" defaultColWidth="8.83203125" defaultRowHeight="14" x14ac:dyDescent="0.15"/><cols><col min="1" max="1" width="6" style="12" customWidth="1"/><col min="2" max="2" width="22.33203125" style="12" customWidth="1"/><col min="3" max="4" width="12" style="12" customWidth="1"/><col min="5" max="6" width="24" style="12" customWidth="1"/><col min="7" max="16384" width="8.83203125" style="12"/></cols><sheetData>${rows.join("")}</sheetData><mergeCells count="1"><mergeCell ref="A6:F6"/></mergeCells><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/><pageSetup scale="85" orientation="portrait" horizontalDpi="4294967295" verticalDpi="4294967295"/><drawing r:id="rId1"/></worksheet>`;
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac xr xr2 xr3" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xmlns:xr2="http://schemas.microsoft.com/office/spreadsheetml/2015/revision2" xmlns:xr3="http://schemas.microsoft.com/office/spreadsheetml/2016/revision3" xr:uid="{00000000-0001-0000-0000-000000000000}"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A6:G${lastRow}"/><sheetViews><sheetView tabSelected="1" zoomScale="120" zoomScaleNormal="120" workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews><sheetFormatPr baseColWidth="10" defaultColWidth="8.83203125" defaultRowHeight="14" x14ac:dyDescent="0.15"/><cols><col min="1" max="1" width="6" style="12" customWidth="1"/><col min="2" max="2" width="22.33203125" style="12" customWidth="1"/><col min="3" max="4" width="10" style="12" customWidth="1"/><col min="5" max="5" width="16" style="12" customWidth="1"/><col min="6" max="7" width="18" style="12" customWidth="1"/><col min="8" max="16384" width="8.83203125" style="12"/></cols><sheetData>${rows.join("")}</sheetData><mergeCells count="1"><mergeCell ref="A6:G6"/></mergeCells><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/><pageSetup scale="85" orientation="portrait" horizontalDpi="4294967295" verticalDpi="4294967295"/><drawing r:id="rId1"/></worksheet>`;
   }
 
   function appendPullSection(rows, rowNumber, pulls) {
@@ -976,10 +999,11 @@ document.addEventListener("DOMContentLoaded", () => {
     rows.push(rowXml(rowNumber, [
       cell(`A${rowNumber}`, 1, "No"),
       cell(`B${rowNumber}`, 1, "Jenis Tarikan"),
-      cell(`C${rowNumber}`, 5, "Panjang (m)"),
-      cell(`D${rowNumber}`, 1, "Tipe Kabel"),
-      cell(`E${rowNumber}`, 1, "Detail Lokasi"),
-      cell(`F${rowNumber}`, 1, "Catatan"),
+      cell(`C${rowNumber}`, 5, "Qty"),
+      cell(`D${rowNumber}`, 1, "Satuan"),
+      cell(`E${rowNumber}`, 1, "Tipe Kabel"),
+      cell(`F${rowNumber}`, 1, "Detail Lokasi"),
+      cell(`G${rowNumber}`, 1, "Catatan"),
     ], { height: 15, customHeight: true }));
     rowNumber += 1;
 
@@ -987,10 +1011,11 @@ document.addEventListener("DOMContentLoaded", () => {
       rows.push(rowXml(rowNumber, [
         cell(`A${rowNumber}`, 2, index + 1),
         cell(`B${rowNumber}`, 6, pull.type),
-        cell(`C${rowNumber}`, 2, pull.length),
-        cell(`D${rowNumber}`, 7, pull.cable),
-        cell(`E${rowNumber}`, 8, pull.location),
-        cell(`F${rowNumber}`, 8, pull.note),
+        cell(`C${rowNumber}`, 2, pull.qty),
+        cell(`D${rowNumber}`, 7, pull.unit),
+        cell(`E${rowNumber}`, 7, pull.cable),
+        cell(`F${rowNumber}`, 8, pull.location),
+        cell(`G${rowNumber}`, 8, pull.note),
       ], { height: 15 }));
       rowNumber += 1;
     });
@@ -1299,12 +1324,13 @@ document.addEventListener("DOMContentLoaded", () => {
     fullTableWidth: 554.76,
     itemTableWidth: 289.8,
     pullColumns: [
-      { label: "No", width: 34.04, align: "center", key: "no" },
-      { label: "Jenis Tarikan", width: 123.28, align: "center", key: "type" },
-      { label: "Panjang (m)", width: 66.24, align: "center", key: "length" },
-      { label: "Tipe Kabel", width: 66.24, align: "center", key: "cable" },
-      { label: "Detail Lokasi", width: 132.48, align: "left", key: "location" },
-      { label: "Catatan", width: 132.48, align: "left", key: "note" },
+      { label: "No", width: 30.36, align: "center", key: "no" },
+      { label: "Jenis Tarikan", width: 104.4, align: "center", key: "type" },
+      { label: "Qty", width: 48, align: "center", key: "qty" },
+      { label: "Satuan", width: 56, align: "center", key: "unit" },
+      { label: "Tipe Kabel", width: 88, align: "center", key: "cable", wrap: true },
+      { label: "Detail Lokasi", width: 114, align: "left", key: "location", wrap: true },
+      { label: "Catatan", width: 114, align: "left", key: "note", wrap: true },
     ],
     itemColumns: [
       { label: "No", width: 34.04, align: "center", key: "no" },
@@ -1384,7 +1410,8 @@ document.addEventListener("DOMContentLoaded", () => {
       rows: pulls.map((row, index) => ({
         no: index + 1,
         type: row.type,
-        length: row.length,
+        qty: row.qty,
+        unit: row.unit,
         cable: row.cable,
         location: row.location,
         note: row.note,

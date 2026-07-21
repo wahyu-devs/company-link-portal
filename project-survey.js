@@ -1,5 +1,7 @@
 const THEME_STORAGE_KEY = "linkPortalTheme";
 const SURVEY_STORAGE_KEY = "projectSurveyFormDraft";
+const SURVEY_UPLOAD_ENDPOINT_STORAGE_KEY = "projectSurveyUploadEndpoint";
+const SURVEY_UPLOAD_TIMEOUT_MS = 45000;
 
 (() => {
   try {
@@ -111,6 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const themeToggleIcon = document.getElementById("themeToggleIcon");
   const themeColorMeta = document.getElementById("themeColorMeta");
   const surveyForm = document.getElementById("surveyForm");
+  const saveSurveyButton = document.getElementById("saveSurvey");
   const surveyToast = document.getElementById("surveyToast");
   const savedSurveyModal = document.getElementById("savedSurveyModal");
   const savedSurveyClose = document.getElementById("savedSurveyClose");
@@ -121,6 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const loaderStartedAt = performance.now();
   let toastTimeoutId;
   let savedSurveySnapshot = "";
+  let isSavingSurvey = false;
 
   function itemColumns() {
     return [
@@ -425,12 +429,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function saveSurvey() {
+  async function saveSurvey() {
+    if (isSavingSurvey) {
+      return;
+    }
+
     const data = syncStateFromForm({ format: true });
     if (!validateSurvey(data)) {
       return;
     }
 
+    isSavingSurvey = true;
+    saveSurveyButton.disabled = true;
+
+    try {
+      const locallySaved = saveSurveyLocally(data);
+      if (!locallySaved) {
+        return;
+      }
+
+      await uploadSavedSurvey(data);
+    } finally {
+      saveSurveyButton.disabled = false;
+      isSavingSurvey = false;
+    }
+  }
+
+  function saveSurveyLocally(data) {
     try {
       const savedSurveys = readSavedSurveys();
       const draft = {
@@ -444,8 +469,29 @@ document.addEventListener("DOMContentLoaded", () => {
       renderSavedSurveys(savedSurveys);
       markSurveySaved(data);
       setStatus("Draft survey berhasil disimpan.", "success");
+      return true;
     } catch {
       setStatus("Draft survey belum bisa disimpan di browser ini.", "danger");
+      return false;
+    }
+  }
+
+  async function uploadSavedSurvey(data) {
+    const endpoint = surveyUploadEndpoint();
+
+    if (!endpoint) {
+      setStatus("Draft survey tersimpan. Endpoint upload OneDrive belum dikonfigurasi.", "warning");
+      return;
+    }
+
+    setStatus("Draft survey tersimpan. Menyiapkan upload OneDrive...", "info");
+
+    try {
+      await uploadSurveyArtifacts(data, endpoint);
+      setStatus("Draft survey tersimpan. Excel/PDF terupload dan email Outlook terkirim.", "success");
+    } catch (error) {
+      console.warn("Survey upload failed", error);
+      setStatus("Draft survey tersimpan, tetapi upload OneDrive/notifikasi Outlook belum berhasil.", "danger");
     }
   }
 
@@ -1666,6 +1712,152 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/[\\/:*?"<>|]+/g, "")
       .replace(/\s+/g, " ")
       .trim() || fallback;
+  }
+
+  async function buildPdfBlob(data) {
+    const doc = drawPdf(data, await getLogoDataUrl());
+    return doc.output("blob");
+  }
+
+  async function uploadSurveyArtifacts(data, endpoint) {
+    const createdAt = new Date();
+    const uploadStamp = fileTimestamp(createdAt);
+    const excelFileName = buildUploadFileName(data, "xlsx", uploadStamp);
+    const pdfFileName = buildUploadFileName(data, "pdf", uploadStamp);
+    const [excelBlob, pdfBlob] = await Promise.all([
+      buildXlsx(data),
+      buildPdfBlob(data),
+    ]);
+    const [excelContentBase64, pdfContentBase64] = await Promise.all([
+      blobToBase64(excelBlob),
+      blobToBase64(pdfBlob),
+    ]);
+    const payload = {
+      source: "project-survey-form",
+      createdAt: createdAt.toISOString(),
+      survey: cloneSurvey(data),
+      files: [
+        {
+          name: excelFileName,
+          contentType: excelBlob.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          contentBase64: excelContentBase64,
+        },
+        {
+          name: pdfFileName,
+          contentType: pdfBlob.type || "application/pdf",
+          contentBase64: pdfContentBase64,
+        },
+      ],
+    };
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), surveyUploadTimeout());
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(await surveyUploadErrorMessage(response));
+      }
+
+      return readSurveyUploadResponse(response);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  function buildUploadFileName(data, extension, uploadStamp) {
+    const extensionPattern = new RegExp(`\\.${extension}$`, "i");
+    const baseName = buildFileName(data, extension).replace(extensionPattern, "");
+    return `${baseName} - ${uploadStamp}.${extension}`;
+  }
+
+  function fileTimestamp(date) {
+    const pad = (value) => String(value).padStart(2, "0");
+
+    return [
+      date.getFullYear(),
+      pad(date.getMonth() + 1),
+      pad(date.getDate()),
+      "-",
+      pad(date.getHours()),
+      pad(date.getMinutes()),
+      pad(date.getSeconds()),
+    ].join("");
+  }
+
+  function surveyUploadEndpoint() {
+    const config = globalThis.PROJECT_SURVEY_UPLOAD_CONFIG;
+    const configEndpoint = config && typeof config === "object" ? config.endpoint : "";
+    const globalEndpoint = globalThis.PROJECT_SURVEY_UPLOAD_ENDPOINT;
+    const endpoint = [configEndpoint, globalEndpoint, savedSurveyUploadEndpoint()]
+      .find((value) => typeof value === "string" && value.trim());
+
+    if (endpoint) {
+      return endpoint.trim();
+    }
+
+    const protocol = globalThis.location?.protocol;
+    return protocol === "http:" || protocol === "https:" ? "/api/upload-survey" : "";
+  }
+
+  function savedSurveyUploadEndpoint() {
+    try {
+      return localStorage.getItem(SURVEY_UPLOAD_ENDPOINT_STORAGE_KEY);
+    } catch {
+      return "";
+    }
+  }
+
+  function surveyUploadTimeout() {
+    const config = globalThis.PROJECT_SURVEY_UPLOAD_CONFIG;
+    const configuredTimeout = config && typeof config === "object" ? Number(config.timeoutMs) : NaN;
+    return Number.isFinite(configuredTimeout) && configuredTimeout > 0
+      ? configuredTimeout
+      : SURVEY_UPLOAD_TIMEOUT_MS;
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.addEventListener("load", () => {
+        const result = String(reader.result || "");
+        resolve(result.includes(",") ? result.split(",")[1] : result);
+      }, { once: true });
+      reader.addEventListener("error", reject, { once: true });
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function surveyUploadErrorMessage(response) {
+    try {
+      const errorData = await response.clone().json();
+      return errorData.error || errorData.message || response.statusText;
+    } catch {
+      const errorText = await response.text();
+      return errorText || response.statusText;
+    }
+  }
+
+  async function readSurveyUploadResponse(response) {
+    const text = await response.text();
+
+    if (!text) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
   }
 
   function downloadBlob(blob, fileName) {

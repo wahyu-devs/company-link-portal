@@ -33,6 +33,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="styles.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script defer src="https://alcdn.msauth.net/browser/2.38.4/js/msal-browser.min.js"></script>
+  <script defer src="project-survey.config.js"></script>
   <script defer src="project-survey.js"></script>
   <!-- Vercel Web Analytics -->
   <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
@@ -166,6 +168,11 @@
           <button class="survey-primary-action" type="button" id="saveSurvey">
             <i class="bi bi-floppy" aria-hidden="true"></i>
             <span>Save</span>
+          </button>
+
+          <button class="survey-primary-action" type="button" id="submitSurvey">
+            <i class="bi bi-send" aria-hidden="true"></i>
+            <span>Submit</span>
           </button>
 
           <button class="survey-primary-action" type="button" id="loadSurvey">

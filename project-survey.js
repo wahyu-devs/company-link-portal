@@ -1,7 +1,12 @@
 const THEME_STORAGE_KEY = "linkPortalTheme";
 const SURVEY_STORAGE_KEY = "projectSurveyFormDraft";
-const SURVEY_UPLOAD_ENDPOINT_STORAGE_KEY = "projectSurveyUploadEndpoint";
-const SURVEY_UPLOAD_TIMEOUT_MS = 45000;
+const MICROSOFT_CLIENT_ID_STORAGE_KEY = "projectSurveyMicrosoftClientId";
+const MICROSOFT_TENANT_ID_STORAGE_KEY = "projectSurveyMicrosoftTenantId";
+const MICROSOFT_FOLDER_PATH_STORAGE_KEY = "projectSurveyOneDriveFolderPath";
+const MICROSOFT_NOTIFY_TO_STORAGE_KEY = "projectSurveyOutlookNotifyTo";
+const MICROSOFT_SUBJECT_PREFIX_STORAGE_KEY = "projectSurveyOutlookSubjectPrefix";
+const MICROSOFT_GRAPH_ROOT = "https://graph.microsoft.com/v1.0";
+const MICROSOFT_GRAPH_SCOPES = ["Files.ReadWrite", "Mail.Send", "User.Read"];
 
 (() => {
   try {
@@ -113,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const themeToggleIcon = document.getElementById("themeToggleIcon");
   const themeColorMeta = document.getElementById("themeColorMeta");
   const surveyForm = document.getElementById("surveyForm");
-  const saveSurveyButton = document.getElementById("saveSurvey");
+  const submitSurveyButton = document.getElementById("submitSurvey");
   const surveyToast = document.getElementById("surveyToast");
   const savedSurveyModal = document.getElementById("savedSurveyModal");
   const savedSurveyClose = document.getElementById("savedSurveyClose");
@@ -124,7 +129,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const loaderStartedAt = performance.now();
   let toastTimeoutId;
   let savedSurveySnapshot = "";
-  let isSavingSurvey = false;
+  let isSubmittingSurvey = false;
+  let microsoftAuthClientPromise;
 
   function itemColumns() {
     return [
@@ -429,30 +435,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function saveSurvey() {
-    if (isSavingSurvey) {
-      return;
-    }
-
+  function saveSurvey() {
     const data = syncStateFromForm({ format: true });
     if (!validateSurvey(data)) {
       return;
     }
 
-    isSavingSurvey = true;
-    saveSurveyButton.disabled = true;
-
-    try {
-      const locallySaved = saveSurveyLocally(data);
-      if (!locallySaved) {
-        return;
-      }
-
-      await uploadSavedSurvey(data);
-    } finally {
-      saveSurveyButton.disabled = false;
-      isSavingSurvey = false;
-    }
+    saveSurveyLocally(data);
   }
 
   function saveSurveyLocally(data) {
@@ -476,23 +465,53 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function uploadSavedSurvey(data) {
-    const endpoint = surveyUploadEndpoint();
-
-    if (!endpoint) {
-      setStatus("Draft survey tersimpan. Endpoint upload OneDrive belum dikonfigurasi.", "warning");
+  async function submitSurvey() {
+    if (isSubmittingSurvey) {
       return;
     }
 
-    setStatus("Draft survey tersimpan. Menyiapkan upload OneDrive...", "info");
+    const data = syncStateFromForm({ format: true });
+    if (!validateSurvey(data)) {
+      return;
+    }
+
+    isSubmittingSurvey = true;
+    submitSurveyButton.disabled = true;
 
     try {
-      await uploadSurveyArtifacts(data, endpoint);
-      setStatus("Draft survey tersimpan. Excel/PDF terupload dan email Outlook terkirim.", "success");
+      const locallySaved = saveSurveyLocally(data);
+      if (!locallySaved) {
+        return;
+      }
+
+      setStatus("Draft survey tersimpan. Login Microsoft untuk submit...", "info");
+      await submitSurveyToMicrosoft(data);
+      setStatus("Submit berhasil. Excel/PDF terupload dan email Outlook terkirim.", "success");
     } catch (error) {
-      console.warn("Survey upload failed", error);
-      setStatus("Draft survey tersimpan, tetapi upload OneDrive/notifikasi Outlook belum berhasil.", "danger");
+      console.warn("Survey submit failed", error);
+      setStatus(surveySubmitErrorMessage(error), "danger");
+    } finally {
+      submitSurveyButton.disabled = false;
+      isSubmittingSurvey = false;
     }
+  }
+
+  function surveySubmitErrorMessage(error) {
+    const message = String(error?.message || "");
+
+    if (message.includes("Client ID") || message.includes("folder path")) {
+      return "Draft survey tersimpan. Isi konfigurasi Microsoft di project-survey.config.js dulu.";
+    }
+
+    if (message.includes("HTTP or HTTPS")) {
+      return "Draft survey tersimpan. Submit Microsoft perlu dibuka lewat HTTP/HTTPS.";
+    }
+
+    if (message.includes("login library")) {
+      return "Draft survey tersimpan. Library login Microsoft gagal dimuat.";
+    }
+
+    return "Draft survey tersimpan, tetapi submit OneDrive/Outlook belum berhasil.";
   }
 
   function loadSurvey() {
@@ -1719,7 +1738,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return doc.output("blob");
   }
 
-  async function uploadSurveyArtifacts(data, endpoint) {
+  async function submitSurveyToMicrosoft(data) {
+    const config = microsoftUploadConfig();
+    const { accessToken, account } = await microsoftGraphAccessToken(config);
+
+    setStatus("Menyiapkan file Excel/PDF untuk submit...", "info");
+
     const createdAt = new Date();
     const uploadStamp = fileTimestamp(createdAt);
     const excelFileName = buildUploadFileName(data, "xlsx", uploadStamp);
@@ -1728,48 +1752,28 @@ document.addEventListener("DOMContentLoaded", () => {
       buildXlsx(data),
       buildPdfBlob(data),
     ]);
-    const [excelContentBase64, pdfContentBase64] = await Promise.all([
-      blobToBase64(excelBlob),
-      blobToBase64(pdfBlob),
-    ]);
-    const payload = {
-      source: "project-survey-form",
-      createdAt: createdAt.toISOString(),
-      survey: cloneSurvey(data),
-      files: [
-        {
-          name: excelFileName,
-          contentType: excelBlob.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          contentBase64: excelContentBase64,
-        },
-        {
-          name: pdfFileName,
-          contentType: pdfBlob.type || "application/pdf",
-          contentBase64: pdfContentBase64,
-        },
-      ],
-    };
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), surveyUploadTimeout());
+    const files = [
+      {
+        name: excelFileName,
+        blob: excelBlob,
+        contentType: excelBlob.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      {
+        name: pdfFileName,
+        blob: pdfBlob,
+        contentType: pdfBlob.type || "application/pdf",
+      },
+    ];
+    const uploadedItems = [];
 
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+    setStatus("Mengupload file ke OneDrive...", "info");
 
-      if (!response.ok) {
-        throw new Error(await surveyUploadErrorMessage(response));
-      }
-
-      return readSurveyUploadResponse(response);
-    } finally {
-      clearTimeout(timeoutId);
+    for (const file of files) {
+      uploadedItems.push(await uploadFileToMicrosoftOneDrive(config, accessToken, file));
     }
+
+    setStatus("Mengirim notifikasi Outlook...", "info");
+    await sendMicrosoftUploadNotification(config, accessToken, account, data, uploadedItems);
   }
 
   function buildUploadFileName(data, extension, uploadStamp) {
@@ -1792,72 +1796,250 @@ document.addEventListener("DOMContentLoaded", () => {
     ].join("");
   }
 
-  function surveyUploadEndpoint() {
-    const config = globalThis.PROJECT_SURVEY_UPLOAD_CONFIG;
-    const configEndpoint = config && typeof config === "object" ? config.endpoint : "";
-    const globalEndpoint = globalThis.PROJECT_SURVEY_UPLOAD_ENDPOINT;
-    const endpoint = [configEndpoint, globalEndpoint, savedSurveyUploadEndpoint()]
-      .find((value) => typeof value === "string" && value.trim());
+  function microsoftUploadConfig() {
+    const config = globalThis.PROJECT_SURVEY_MICROSOFT_CONFIG;
+    const options = config && typeof config === "object" ? config : {};
+    const clientId = configTextValue(options.clientId, MICROSOFT_CLIENT_ID_STORAGE_KEY);
+    const folderPath = configTextValue(options.folderPath, MICROSOFT_FOLDER_PATH_STORAGE_KEY);
 
-    if (endpoint) {
-      return endpoint.trim();
+    if (!clientId) {
+      throw new Error("Microsoft Client ID is not configured.");
     }
 
-    const protocol = globalThis.location?.protocol;
-    return protocol === "http:" || protocol === "https:" ? "/api/upload-survey" : "";
+    if (!folderPath) {
+      throw new Error("OneDrive folder path is not configured.");
+    }
+
+    return {
+      clientId,
+      tenantId: configTextValue(options.tenantId, MICROSOFT_TENANT_ID_STORAGE_KEY) || "common",
+      folderPath,
+      notifyTo: configTextValue(options.notifyTo, MICROSOFT_NOTIFY_TO_STORAGE_KEY),
+      subjectPrefix: configTextValue(options.subjectPrefix, MICROSOFT_SUBJECT_PREFIX_STORAGE_KEY)
+        || "New Project Survey Upload",
+      scopes: Array.isArray(options.scopes) && options.scopes.length
+        ? options.scopes
+        : MICROSOFT_GRAPH_SCOPES,
+    };
   }
 
-  function savedSurveyUploadEndpoint() {
+  function configTextValue(value, storageKey) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+
     try {
-      return localStorage.getItem(SURVEY_UPLOAD_ENDPOINT_STORAGE_KEY);
+      return localStorage.getItem(storageKey)?.trim() || "";
     } catch {
       return "";
     }
   }
 
-  function surveyUploadTimeout() {
-    const config = globalThis.PROJECT_SURVEY_UPLOAD_CONFIG;
-    const configuredTimeout = config && typeof config === "object" ? Number(config.timeoutMs) : NaN;
-    return Number.isFinite(configuredTimeout) && configuredTimeout > 0
-      ? configuredTimeout
-      : SURVEY_UPLOAD_TIMEOUT_MS;
-  }
+  async function microsoftGraphAccessToken(config) {
+    const client = await microsoftAuthClient(config);
+    const account = client.getActiveAccount?.() || client.getAllAccounts()[0];
+    const tokenRequest = {
+      scopes: config.scopes,
+      account,
+    };
 
-  function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
+    if (account) {
+      try {
+        const tokenResponse = await client.acquireTokenSilent(tokenRequest);
+        return { accessToken: tokenResponse.accessToken, account: tokenResponse.account || account };
+      } catch {
+        // Fall back to an interactive popup when the cached token is missing or expired.
+      }
+    }
 
-      reader.addEventListener("load", () => {
-        const result = String(reader.result || "");
-        resolve(result.includes(",") ? result.split(",")[1] : result);
-      }, { once: true });
-      reader.addEventListener("error", reject, { once: true });
-      reader.readAsDataURL(blob);
+    const loginResponse = await client.loginPopup({
+      scopes: config.scopes,
+      prompt: "select_account",
     });
+
+    if (loginResponse.account) {
+      client.setActiveAccount?.(loginResponse.account);
+    }
+
+    if (loginResponse.accessToken) {
+      return { accessToken: loginResponse.accessToken, account: loginResponse.account };
+    }
+
+    const tokenResponse = await client.acquireTokenSilent({
+      scopes: config.scopes,
+      account: loginResponse.account,
+    });
+    return { accessToken: tokenResponse.accessToken, account: tokenResponse.account || loginResponse.account };
   }
 
-  async function surveyUploadErrorMessage(response) {
-    try {
-      const errorData = await response.clone().json();
-      return errorData.error || errorData.message || response.statusText;
-    } catch {
-      const errorText = await response.text();
-      return errorText || response.statusText;
+  async function microsoftAuthClient(config) {
+    if (globalThis.location?.protocol === "file:") {
+      throw new Error("Microsoft login requires the app to be served over HTTP or HTTPS.");
+    }
+
+    if (!globalThis.msal?.PublicClientApplication) {
+      throw new Error("Microsoft login library is not available.");
+    }
+
+    if (!microsoftAuthClientPromise) {
+      const authorityTenant = encodeURIComponent(config.tenantId || "common");
+      const redirectUri = globalThis.location.href.split("#")[0];
+      const client = new globalThis.msal.PublicClientApplication({
+        auth: {
+          clientId: config.clientId,
+          authority: `https://login.microsoftonline.com/${authorityTenant}`,
+          redirectUri,
+        },
+        cache: {
+          cacheLocation: "sessionStorage",
+        },
+      });
+
+      microsoftAuthClientPromise = Promise.resolve(client.initialize?.()).then(() => client);
+    }
+
+    return microsoftAuthClientPromise;
+  }
+
+  async function uploadFileToMicrosoftOneDrive(config, accessToken, file) {
+    const response = await fetch(microsoftOneDriveUploadUrl(config.folderPath, file.name), {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": file.contentType,
+      },
+      body: file.blob,
+    });
+    const data = await readMicrosoftGraphResponse(response);
+
+    if (!response.ok) {
+      throw new Error(microsoftGraphErrorMessage(data, `Upload OneDrive gagal untuk ${file.name}.`));
+    }
+
+    return {
+      id: data.id,
+      name: data.name || file.name,
+      size: data.size || file.blob.size,
+      webUrl: data.webUrl || "",
+    };
+  }
+
+  function microsoftOneDriveUploadUrl(folderPath, fileName) {
+    return `${MICROSOFT_GRAPH_ROOT}/me/drive/root:/${encodedMicrosoftOneDrivePath(folderPath, fileName)}:/content`;
+  }
+
+  function encodedMicrosoftOneDrivePath(folderPath, fileName) {
+    return [...microsoftFolderPathSegments(folderPath), fileName]
+      .map(encodeURIComponent)
+      .join("/");
+  }
+
+  function microsoftFolderPathSegments(folderPath) {
+    return String(folderPath || "")
+      .split("/")
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+  }
+
+  async function sendMicrosoftUploadNotification(config, accessToken, account, data, uploadedItems) {
+    const recipients = microsoftNotificationRecipients(config, account);
+
+    if (!recipients.length) {
+      throw new Error("Outlook notification recipient is not configured.");
+    }
+
+    const response = await fetch(`${MICROSOFT_GRAPH_ROOT}/me/sendMail`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: {
+          subject: microsoftEmailSubject(config, data),
+          body: {
+            contentType: "HTML",
+            content: microsoftNotificationHtml(data, uploadedItems),
+          },
+          toRecipients: recipients.map((address) => ({
+            emailAddress: { address },
+          })),
+        },
+        saveToSentItems: true,
+      }),
+    });
+    const responseData = await readMicrosoftGraphResponse(response);
+
+    if (!response.ok) {
+      throw new Error(microsoftGraphErrorMessage(responseData, "Notifikasi Outlook gagal dikirim."));
     }
   }
 
-  async function readSurveyUploadResponse(response) {
+  function microsoftNotificationRecipients(config, account) {
+    return String(config.notifyTo || account?.username || "")
+      .split(",")
+      .map((address) => address.trim())
+      .filter(Boolean);
+  }
+
+  function microsoftEmailSubject(config, data) {
+    const customerName = data.customerName || "Customer";
+    const projectName = data.projectName || "Project";
+    return `${config.subjectPrefix}: ${customerName} - ${projectName}`;
+  }
+
+  function microsoftNotificationHtml(data, uploadedItems) {
+    const fileItems = uploadedItems
+      .map((item) => {
+        const label = escapeHtml(item.name);
+        return item.webUrl
+          ? `<li><a href="${escapeHtml(item.webUrl)}">${label}</a></li>`
+          : `<li>${label}</li>`;
+      })
+      .join("");
+
+    return [
+      "<p>New Project Survey files have been uploaded to OneDrive.</p>",
+      "<table>",
+      microsoftNotificationTableRow("Tanggal Survey", data.surveyDate),
+      microsoftNotificationTableRow("Nama Surveyor", data.surveyorName),
+      microsoftNotificationTableRow("Nama Customer", data.customerName),
+      microsoftNotificationTableRow("PIC Customer", data.customerPic),
+      microsoftNotificationTableRow("Nama Project", data.projectName),
+      "</table>",
+      `<ul>${fileItems}</ul>`,
+    ].join("");
+  }
+
+  function microsoftNotificationTableRow(label, value) {
+    return `<tr><th align="left">${escapeHtml(label)}</th><td>${escapeHtml(value || "-")}</td></tr>`;
+  }
+
+  async function readMicrosoftGraphResponse(response) {
     const text = await response.text();
 
     if (!text) {
-      return null;
+      return {};
     }
 
     try {
       return JSON.parse(text);
     } catch {
-      return text;
+      return { raw: text };
     }
+  }
+
+  function microsoftGraphErrorMessage(data, fallback) {
+    return data?.error?.message || data?.error_description || data?.raw || fallback;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   function downloadBlob(blob, fileName) {
@@ -1934,6 +2116,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("saveSurvey").addEventListener("click", saveSurvey);
+  document.getElementById("submitSurvey").addEventListener("click", submitSurvey);
   document.getElementById("loadSurvey").addEventListener("click", loadSurvey);
   document.getElementById("resetSurvey").addEventListener("click", resetSurvey);
   savedSurveyList.addEventListener("click", (event) => {

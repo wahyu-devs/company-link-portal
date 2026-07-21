@@ -16,7 +16,7 @@ Company Link Portal is a simple static web page designed to help internal users 
 - Favicon and mobile home screen icon support
 - Social sharing preview metadata
 - Static HTML, CSS, and JavaScript with no build process required
-- Project Survey Save can upload generated Excel/PDF files to OneDrive and send an Outlook notification through the serverless API
+- Project Survey Submit uploads generated Excel/PDF files to OneDrive and sends an Outlook notification with Microsoft delegated login
 
 ## Technologies Used
 
@@ -31,39 +31,46 @@ Company Link Portal is a simple static web page designed to help internal users 
 
 Open `index.html` directly in a browser, or deploy it to any static hosting service.
 
-For the Project Survey upload workflow, deploy with the included `api/upload-survey.js`
-serverless endpoint and configure these environment variables:
+For the Project Survey submit workflow, serve the app over HTTP(S), register a
+Microsoft single-page application, then fill `project-survey.config.js`:
 
-```text
-MICROSOFT_TENANT_ID=
-MICROSOFT_CLIENT_ID=
-MICROSOFT_CLIENT_SECRET=
-ONEDRIVE_USER_ID=
-ONEDRIVE_FOLDER_PATH=
-OUTLOOK_MAILBOX_USER_ID=
-OUTLOOK_NOTIFY_TO=
+```js
+window.PROJECT_SURVEY_MICROSOFT_CONFIG = {
+  clientId: "your-application-client-id",
+  tenantId: "common",
+  folderPath: "Project Survey/Uploads",
+  notifyTo: "your-email@example.com",
+  subjectPrefix: "New Project Survey Upload",
+};
 ```
 
-`ONEDRIVE_DRIVE_ID` can be used instead of `ONEDRIVE_USER_ID`, and
-`ONEDRIVE_FOLDER_ITEM_ID` can be used instead of `ONEDRIVE_FOLDER_PATH`.
-The Microsoft Entra app registration needs Microsoft Graph application
-permissions for `Files.ReadWrite.All` and `Mail.Send` with admin consent.
+The Microsoft app registration needs a SPA redirect URI that exactly matches
+the deployed `project-survey.html` URL, for example
+`https://example.com/project-survey.html`. For local testing, add a local HTTP
+redirect URI such as `http://localhost:8000/project-survey.html`.
 
-When the app is served over HTTP(S), the Save button posts generated files to
-`/api/upload-survey` after the local draft is saved. To use a separate upload
-service, set `window.PROJECT_SURVEY_UPLOAD_ENDPOINT` or store the endpoint in
-`localStorage.projectSurveyUploadEndpoint`.
+Add Microsoft Graph delegated permissions:
+
+- `Files.ReadWrite`
+- `Mail.Send`
+- `User.Read`
+
+The Save button only stores a local draft. The Submit button stores a local
+draft, prompts Microsoft login when needed, uploads the generated Excel/PDF
+files to the configured OneDrive folder, and sends the Outlook notification.
+This delegated setup does not use a client secret.
 
 ## Project Structure
 
 ```text
 .
-├── api
-│   └── upload-survey.js
 ├── assets
 │   └── images
 ├── index.html
 ├── main.js
+├── project-survey.config.js
+├── project-survey.html
+├── project-survey.js
 ├── styles.css
 └── README.md
 ```

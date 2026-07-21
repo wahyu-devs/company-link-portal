@@ -484,12 +484,7 @@ document.addEventListener("DOMContentLoaded", () => {
     submitSurveyButton.disabled = true;
 
     try {
-      const locallySaved = saveSurveyLocally(data);
-      if (!locallySaved) {
-        return;
-      }
-
-      setStatus("Draft survey tersimpan. Login Google untuk submit...", "info");
+      setStatus("Login Google untuk submit...", "info");
       await submitSurveyToGoogle(data);
       setStatus("Submit berhasil. Excel/PDF terupload dan email Gmail terkirim.", "success");
     } catch (error) {
@@ -505,18 +500,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const message = String(error?.message || "");
 
     if (message.includes("Client ID") || message.includes("folder ID")) {
-      return "Draft survey tersimpan. Isi konfigurasi Google di project-survey.config.js dulu.";
+      return "Submit belum berhasil. Isi konfigurasi Google di project-survey.config.js dulu.";
     }
 
     if (message.includes("HTTP or HTTPS")) {
-      return "Draft survey tersimpan. Submit Google perlu dibuka lewat HTTP/HTTPS.";
+      return "Submit Google perlu dibuka lewat HTTP/HTTPS.";
     }
 
     if (message.includes("login library")) {
-      return "Draft survey tersimpan. Library login Google gagal dimuat.";
+      return "Submit belum berhasil. Library login Google gagal dimuat.";
     }
 
-    return "Draft survey tersimpan, tetapi submit Google Drive/Gmail belum berhasil.";
+    return "Submit Google Drive/Gmail belum berhasil.";
   }
 
   function loadSurvey() {

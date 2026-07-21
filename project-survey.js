@@ -1871,7 +1871,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
       });
 
-      googleTokenClient.requestAccessToken({ prompt: "consent" });
+      googleTokenClient.requestAccessToken({ prompt: "" });
     });
   }
 

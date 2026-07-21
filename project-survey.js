@@ -2004,7 +2004,7 @@ document.addEventListener("DOMContentLoaded", () => {
       '<div style="margin:0;background:#101010;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#f6f6f6;">',
       '<div style="max-width:640px;margin:0 auto;background:#151515;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden;">',
       '<div style="padding:22px 24px 18px;border-bottom:1px solid #2a2a2a;background:#151515;">',
-      '<div style="display:inline-block;margin:0 0 14px;padding:7px 10px;border:1px solid #2f7c5e;border-radius:999px;background:#10251d;color:#34d399;font-size:12px;font-weight:700;">New Upload</div>',
+      '<div style="display:inline-block;margin:0 0 14px;padding:7px 10px;border:1px solid #2563eb;border-radius:999px;background:#0f1f3d;color:#60a5fa;font-size:12px;font-weight:700;">New Upload</div>',
       '<h1 style="margin:0;font-size:24px;line-height:1.25;font-weight:700;color:#f6f6f6;">Project Survey Form Submitted!</h1>',
       '</div>',
       '<div style="padding:24px;">',
@@ -2057,7 +2057,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return [
       '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0;margin:0 0 8px;background:#101010;border:1px solid #2a2a2a;border-radius:10px;overflow:hidden;">',
       '<tr>',
-      `<td style="width:38%;padding:12px 14px;background:#101010;font-size:12px;line-height:1.45;color:#818181;font-weight:700;vertical-align:top;">${escapeHtml(label)}</td>`,
+      `<td style="width:38%;padding:12px 14px;background:#101010;font-size:14px;line-height:1.45;color:#818181;font-weight:700;vertical-align:top;">${escapeHtml(label)}</td>`,
       `<td style="padding:12px 14px;background:#101010;font-size:14px;line-height:1.45;color:#f6f6f6;font-weight:600;vertical-align:top;">${escapeHtml(value || "-")}</td>`,
       '</tr>',
       '</table>',

@@ -2001,13 +2001,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const projectName = escapeHtml(data.projectName || "Project");
 
     return [
-      '<div style="width:100%;box-sizing:border-box;margin:0;background:#101010;padding:12px;font-family:Arial,Helvetica,sans-serif;color:#f6f6f6;">',
-      '<div style="width:100%;max-width:640px;box-sizing:border-box;margin:0 auto;background:#151515;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden;">',
-      '<div style="padding:20px 18px 18px;border-bottom:1px solid #2a2a2a;background:#151515;">',
+      '<div style="margin:0;background:#101010;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#f6f6f6;">',
+      '<div style="max-width:640px;margin:0 auto;background:#151515;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden;">',
+      '<div style="padding:22px 24px 18px;border-bottom:1px solid #2a2a2a;background:#151515;">',
       '<div style="display:inline-block;margin:0 0 14px;padding:7px 10px;border:1px solid rgba(96, 165, 250, 0.48);border-radius:999px;background:rgba(59, 130, 246, 0.14);color:#60a5fa;font-size:12px;font-weight:700;">New Upload</div>',
       '<h1 style="margin:0;font-size:24px;line-height:1.25;font-weight:700;color:#f6f6f6;">Project Survey Form Submitted!</h1>',
       '</div>',
-      '<div style="padding:18px;">',
+      '<div style="padding:24px;">',
       '<p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#b9b9b9;">',
       'A new project survey form has been submitted. The Excel and PDF files are now available in Google Drive.',
       '</p>',

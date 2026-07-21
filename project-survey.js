@@ -486,7 +486,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       setStatus("Login Google untuk submit...", "info");
       await submitSurveyToGoogle(data);
-      setStatus("Submit berhasil. Excel/PDF terupload dan email Gmail terkirim.", "success");
+      setStatus("Submit berhasil. Excel/PDF terupload dan email terkirim.", "success");
     } catch (error) {
       console.warn("Survey submit failed", error);
       setStatus(surveySubmitErrorMessage(error), "danger");
@@ -1773,7 +1773,7 @@ document.addEventListener("DOMContentLoaded", () => {
       uploadedItems.push(await uploadFileToGoogleDrive(config, accessToken, file));
     }
 
-    setStatus("Mengirim notifikasi Gmail...", "info");
+    setStatus("Mengirim notifikasi email...", "info");
     await sendGoogleUploadNotification(config, accessToken, account, data, uploadedItems);
   }
 
@@ -1960,7 +1960,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const responseData = await readGoogleApiResponse(response);
 
     if (!response.ok) {
-      throw new Error(googleApiErrorMessage(responseData, "Notifikasi Gmail gagal dikirim."));
+      throw new Error(googleApiErrorMessage(responseData, "Notifikasi email gagal dikirim."));
     }
   }
 

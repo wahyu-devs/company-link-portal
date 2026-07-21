@@ -2054,7 +2054,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function googleNotificationTableRow(label, value) {
     return [
-      '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0;margin:0 0 8px;background:#101010;border:1px solid #2a2a2a;">',
+      '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0;margin:0 0 8px;background:#101010;border:1px solid #2a2a2a;border-radius:10px;overflow:hidden;">',
       '<tr>',
       `<td style="width:38%;padding:12px 14px;background:#101010;font-size:12px;line-height:1.45;color:#818181;font-weight:700;text-transform:uppercase;vertical-align:top;">${escapeHtml(label)}</td>`,
       `<td style="padding:12px 14px;background:#101010;font-size:14px;line-height:1.45;color:#f6f6f6;font-weight:600;vertical-align:top;">${escapeHtml(value || "-")}</td>`,

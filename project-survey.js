@@ -2004,30 +2004,28 @@ document.addEventListener("DOMContentLoaded", () => {
       '<div style="margin:0;background:#101010;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#f6f6f6;">',
       '<div style="max-width:640px;margin:0 auto;background:#151515;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden;">',
       '<div style="padding:22px 24px 18px;border-bottom:1px solid #2a2a2a;background:#151515;">',
-      '<p style="margin:0 0 10px;font-size:12px;line-height:1.4;font-weight:700;text-transform:uppercase;color:#b9b9b9;">Perkom Indah Murni</p>',
-      '<h1 style="margin:0;font-size:24px;line-height:1.25;font-weight:700;color:#f6f6f6;">Project Survey Submitted</h1>',
-      '<div style="margin-top:14px;display:inline-block;padding:7px 10px;border:1px solid #2f7c5e;border-radius:999px;background:#10251d;color:#34d399;font-size:12px;font-weight:700;">Upload Complete</div>',
+      '<div style="display:inline-block;margin:0 0 14px;padding:7px 10px;border:1px solid #2f7c5e;border-radius:999px;background:#10251d;color:#34d399;font-size:12px;font-weight:700;">New Upload</div>',
+      '<h1 style="margin:0;font-size:24px;line-height:1.25;font-weight:700;color:#f6f6f6;">Project Survey Form Submitted!</h1>',
       '</div>',
       '<div style="padding:24px;">',
       '<p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#b9b9b9;">',
-      'Form survey project telah disubmit dan file Excel/PDF sudah diupload ke Google Drive.',
+      'A new project survey form has been submitted. The Excel and PDF files are now available in Google Drive.',
       '</p>',
       '<div style="margin:0 0 22px;padding:16px;background:#101010;border:1px solid #2a2a2a;border-radius:12px;">',
-      `<p style="margin:0 0 6px;font-size:13px;line-height:1.4;color:#818181;">Customer</p>`,
       `<p style="margin:0;font-size:19px;line-height:1.35;font-weight:700;color:#f6f6f6;">${customerName}</p>`,
       `<p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:#b9b9b9;">${projectName}</p>`,
       '</div>',
       '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 22px;">',
-      googleNotificationTableRow("Tanggal Survey", formatSurveyDate(data.surveyDate)),
-      googleNotificationTableRow("Nama Surveyor", data.surveyorName),
-      googleNotificationTableRow("Nama Customer", data.customerName),
-      googleNotificationTableRow("PIC Customer", data.customerPic),
-      googleNotificationTableRow("Nama Project", data.projectName),
+      googleNotificationTableRow("Survey Date", formatEmailSurveyDate(data.surveyDate)),
+      googleNotificationTableRow("Surveyor", data.surveyorName),
+      googleNotificationTableRow("Customer", data.customerName),
+      googleNotificationTableRow("Customer PIC", data.customerPic),
+      googleNotificationTableRow("Project Name", data.projectName),
       "</table>",
       '<p style="margin:0 0 10px;font-size:13px;line-height:1.4;font-weight:700;color:#f6f6f6;">File Upload</p>',
       `<div style="display:block;margin:0 0 22px;">${fileItems}</div>`,
       '<p style="margin:0;padding-top:16px;border-top:1px solid #2a2a2a;font-size:12px;line-height:1.5;color:#818181;">',
-      'Email ini dikirim otomatis dari Project Survey Form.',
+      'This email was sent automatically from Project Survey Form.',
       '</p>',
       '</div>',
       '</div>',
@@ -2042,7 +2040,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return [
         '<div style="margin:0 0 10px;padding:13px 14px;border:1px solid #2a2a2a;border-radius:10px;background:#101010;">',
         `<a href="${escapeHtml(item.webUrl)}" style="display:block;font-size:14px;line-height:1.45;font-weight:700;color:#60a5fa;text-decoration:none;">${label}</a>`,
-        '<p style="margin:5px 0 0;font-size:12px;line-height:1.45;color:#818181;">Buka file di Google Drive</p>',
+        '<p style="margin:5px 0 0;font-size:12px;line-height:1.45;color:#818181;">Open file in Google Drive</p>',
         '</div>',
       ].join("");
     }
@@ -2061,6 +2059,24 @@ document.addEventListener("DOMContentLoaded", () => {
       `<td style="padding:11px 12px;border:1px solid #2a2a2a;background:#151515;font-size:13px;line-height:1.45;color:#f6f6f6;">${escapeHtml(value || "-")}</td>`,
       '</tr>',
     ].join("");
+  }
+
+  function formatEmailSurveyDate(value) {
+    if (!value) {
+      return "";
+    }
+
+    const date = new Date(`${value}T00:00:00`);
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return date.toLocaleDateString("en-US", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
   }
 
   async function readGoogleApiResponse(response) {

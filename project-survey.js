@@ -2001,20 +2001,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const projectName = escapeHtml(data.projectName || "Project");
 
     return [
-      '<div style="margin:0;background:#f4f6fb;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#172033;">',
-      '<div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e3e8f2;border-radius:12px;overflow:hidden;">',
-      '<div style="background:#123b6d;padding:22px 24px;color:#ffffff;">',
-      '<p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#bcd4ef;">Perkom Indah Murni</p>',
-      '<h1 style="margin:0;font-size:22px;line-height:1.3;font-weight:700;">Project Survey Submitted</h1>',
+      '<div style="margin:0;background:#101010;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#f6f6f6;">',
+      '<div style="max-width:640px;margin:0 auto;background:#151515;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden;">',
+      '<div style="padding:22px 24px 18px;border-bottom:1px solid #2a2a2a;background:#151515;">',
+      '<p style="margin:0 0 10px;font-size:12px;line-height:1.4;font-weight:700;text-transform:uppercase;color:#b9b9b9;">Perkom Indah Murni</p>',
+      '<h1 style="margin:0;font-size:24px;line-height:1.25;font-weight:700;color:#f6f6f6;">Project Survey Submitted</h1>',
+      '<div style="margin-top:14px;display:inline-block;padding:7px 10px;border:1px solid #2f7c5e;border-radius:999px;background:#10251d;color:#34d399;font-size:12px;font-weight:700;">Upload Complete</div>',
       '</div>',
       '<div style="padding:24px;">',
-      '<p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#3d4a5f;">',
+      '<p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#b9b9b9;">',
       'Form survey project telah disubmit dan file Excel/PDF sudah diupload ke Google Drive.',
       '</p>',
-      '<div style="margin:0 0 22px;padding:16px;background:#f8fafc;border:1px solid #e5eaf3;border-radius:10px;">',
-      `<p style="margin:0 0 4px;font-size:13px;color:#68758a;">Customer</p>`,
-      `<p style="margin:0;font-size:18px;font-weight:700;color:#172033;">${customerName}</p>`,
-      `<p style="margin:8px 0 0;font-size:14px;color:#3d4a5f;">${projectName}</p>`,
+      '<div style="margin:0 0 22px;padding:16px;background:#101010;border:1px solid #2a2a2a;border-radius:12px;">',
+      `<p style="margin:0 0 6px;font-size:13px;line-height:1.4;color:#818181;">Customer</p>`,
+      `<p style="margin:0;font-size:19px;line-height:1.35;font-weight:700;color:#f6f6f6;">${customerName}</p>`,
+      `<p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:#b9b9b9;">${projectName}</p>`,
       '</div>',
       '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 22px;">',
       googleNotificationTableRow("Tanggal Survey", formatSurveyDate(data.surveyDate)),
@@ -2023,9 +2024,9 @@ document.addEventListener("DOMContentLoaded", () => {
       googleNotificationTableRow("PIC Customer", data.customerPic),
       googleNotificationTableRow("Nama Project", data.projectName),
       "</table>",
-      '<p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#172033;">File Upload</p>',
+      '<p style="margin:0 0 10px;font-size:13px;line-height:1.4;font-weight:700;color:#f6f6f6;">File Upload</p>',
       `<div style="display:block;margin:0 0 22px;">${fileItems}</div>`,
-      '<p style="margin:0;padding-top:16px;border-top:1px solid #e5eaf3;font-size:12px;line-height:1.5;color:#7a8799;">',
+      '<p style="margin:0;padding-top:16px;border-top:1px solid #2a2a2a;font-size:12px;line-height:1.5;color:#818181;">',
       'Email ini dikirim otomatis dari Project Survey Form.',
       '</p>',
       '</div>',
@@ -2039,16 +2040,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (item.webUrl) {
       return [
-        '<div style="margin:0 0 10px;padding:12px 14px;border:1px solid #dce5f2;border-radius:8px;background:#ffffff;">',
-        `<a href="${escapeHtml(item.webUrl)}" style="font-size:14px;font-weight:700;color:#0b57d0;text-decoration:none;">${label}</a>`,
-        '<p style="margin:4px 0 0;font-size:12px;color:#68758a;">Buka file di Google Drive</p>',
+        '<div style="margin:0 0 10px;padding:13px 14px;border:1px solid #2a2a2a;border-radius:10px;background:#101010;">',
+        `<a href="${escapeHtml(item.webUrl)}" style="display:block;font-size:14px;line-height:1.45;font-weight:700;color:#60a5fa;text-decoration:none;">${label}</a>`,
+        '<p style="margin:5px 0 0;font-size:12px;line-height:1.45;color:#818181;">Buka file di Google Drive</p>',
         '</div>',
       ].join("");
     }
 
     return [
-      '<div style="margin:0 0 10px;padding:12px 14px;border:1px solid #dce5f2;border-radius:8px;background:#ffffff;">',
-      `<p style="margin:0;font-size:14px;font-weight:700;color:#172033;">${label}</p>`,
+      '<div style="margin:0 0 10px;padding:13px 14px;border:1px solid #2a2a2a;border-radius:10px;background:#101010;">',
+      `<p style="margin:0;font-size:14px;line-height:1.45;font-weight:700;color:#f6f6f6;">${label}</p>`,
       '</div>',
     ].join("");
   }
@@ -2056,8 +2057,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function googleNotificationTableRow(label, value) {
     return [
       '<tr>',
-      `<th align="left" style="width:38%;padding:10px 12px;border:1px solid #e5eaf3;background:#f8fafc;font-size:13px;color:#68758a;font-weight:700;">${escapeHtml(label)}</th>`,
-      `<td style="padding:10px 12px;border:1px solid #e5eaf3;font-size:13px;color:#172033;">${escapeHtml(value || "-")}</td>`,
+      `<th align="left" style="width:38%;padding:11px 12px;border:1px solid #2a2a2a;background:#101010;font-size:13px;line-height:1.45;color:#818181;font-weight:700;">${escapeHtml(label)}</th>`,
+      `<td style="padding:11px 12px;border:1px solid #2a2a2a;background:#151515;font-size:13px;line-height:1.45;color:#f6f6f6;">${escapeHtml(value || "-")}</td>`,
       '</tr>',
     ].join("");
   }

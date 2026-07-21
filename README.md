@@ -16,7 +16,7 @@ Company Link Portal is a simple static web page designed to help internal users 
 - Favicon and mobile home screen icon support
 - Social sharing preview metadata
 - Static HTML, CSS, and JavaScript with no build process required
-- Project Survey Submit uploads generated Excel/PDF files to OneDrive and sends an Outlook notification with Microsoft delegated login
+- Project Survey Submit uploads generated Excel/PDF files to Google Drive and sends a Gmail notification with Google OAuth
 
 ## Technologies Used
 
@@ -25,40 +25,40 @@ Company Link Portal is a simple static web page designed to help internal users 
 - JavaScript
 - Bootstrap Icons
 - Google Fonts
-- Microsoft Graph API
+- Google Drive API
+- Gmail API
 
 ## Usage
 
 Open `index.html` directly in a browser, or deploy it to any static hosting service.
 
-For the Project Survey submit workflow, serve the app over HTTP(S), register a
-Microsoft single-page application, then fill `project-survey.config.js`:
+For the Project Survey submit workflow, serve the app over HTTP(S), create a
+Google Cloud OAuth client, enable Google Drive API and Gmail API, then fill
+`project-survey.config.js`:
 
 ```js
-window.PROJECT_SURVEY_MICROSOFT_CONFIG = {
+window.PROJECT_SURVEY_GOOGLE_CONFIG = {
   clientId: "your-application-client-id",
-  tenantId: "common",
-  folderPath: "Project Survey/Uploads",
+  folderId: "your-google-drive-folder-id",
   notifyTo: "your-email@example.com",
   subjectPrefix: "New Project Survey Upload",
 };
 ```
 
-The Microsoft app registration needs a SPA redirect URI that exactly matches
-the deployed `project-survey.html` URL, for example
-`https://example.com/project-survey.html`. For local testing, add a local HTTP
-redirect URI such as `http://localhost:8000/project-survey.html`.
+The OAuth client must be a Web application with an Authorized JavaScript origin
+that matches the site origin, for example `https://example.com`. For local
+testing, add an origin such as `http://localhost:8000`.
 
-Add Microsoft Graph delegated permissions:
+Required Google OAuth scopes:
 
-- `Files.ReadWrite`
-- `Mail.Send`
-- `User.Read`
+- `https://www.googleapis.com/auth/drive.file`
+- `https://www.googleapis.com/auth/gmail.send`
+- `https://www.googleapis.com/auth/userinfo.email`
 
 The Save button only stores a local draft. The Submit button stores a local
-draft, prompts Microsoft login when needed, uploads the generated Excel/PDF
-files to the configured OneDrive folder, and sends the Outlook notification.
-This delegated setup does not use a client secret.
+draft, prompts Google login when needed, uploads the generated Excel/PDF files
+to the configured Google Drive folder, and sends the Gmail notification. This
+browser-based setup does not use a client secret.
 
 ## Project Structure
 

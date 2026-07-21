@@ -1,12 +1,17 @@
 const THEME_STORAGE_KEY = "linkPortalTheme";
 const SURVEY_STORAGE_KEY = "projectSurveyFormDraft";
-const MICROSOFT_CLIENT_ID_STORAGE_KEY = "projectSurveyMicrosoftClientId";
-const MICROSOFT_TENANT_ID_STORAGE_KEY = "projectSurveyMicrosoftTenantId";
-const MICROSOFT_FOLDER_PATH_STORAGE_KEY = "projectSurveyOneDriveFolderPath";
-const MICROSOFT_NOTIFY_TO_STORAGE_KEY = "projectSurveyOutlookNotifyTo";
-const MICROSOFT_SUBJECT_PREFIX_STORAGE_KEY = "projectSurveyOutlookSubjectPrefix";
-const MICROSOFT_GRAPH_ROOT = "https://graph.microsoft.com/v1.0";
-const MICROSOFT_GRAPH_SCOPES = ["Files.ReadWrite", "Mail.Send", "User.Read"];
+const GOOGLE_CLIENT_ID_STORAGE_KEY = "projectSurveyGoogleClientId";
+const GOOGLE_DRIVE_FOLDER_ID_STORAGE_KEY = "projectSurveyGoogleDriveFolderId";
+const GOOGLE_NOTIFY_TO_STORAGE_KEY = "projectSurveyGmailNotifyTo";
+const GOOGLE_SUBJECT_PREFIX_STORAGE_KEY = "projectSurveyGmailSubjectPrefix";
+const GOOGLE_DRIVE_UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files";
+const GOOGLE_GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
+const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
+const GOOGLE_API_SCOPES = [
+  "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/userinfo.email",
+];
 
 (() => {
   try {
@@ -130,7 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let toastTimeoutId;
   let savedSurveySnapshot = "";
   let isSubmittingSurvey = false;
-  let microsoftAuthClientPromise;
+  let googleTokenClient;
 
   function itemColumns() {
     return [
@@ -484,9 +489,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      setStatus("Draft survey tersimpan. Login Microsoft untuk submit...", "info");
-      await submitSurveyToMicrosoft(data);
-      setStatus("Submit berhasil. Excel/PDF terupload dan email Outlook terkirim.", "success");
+      setStatus("Draft survey tersimpan. Login Google untuk submit...", "info");
+      await submitSurveyToGoogle(data);
+      setStatus("Submit berhasil. Excel/PDF terupload dan email Gmail terkirim.", "success");
     } catch (error) {
       console.warn("Survey submit failed", error);
       setStatus(surveySubmitErrorMessage(error), "danger");
@@ -499,19 +504,19 @@ document.addEventListener("DOMContentLoaded", () => {
   function surveySubmitErrorMessage(error) {
     const message = String(error?.message || "");
 
-    if (message.includes("Client ID") || message.includes("folder path")) {
-      return "Draft survey tersimpan. Isi konfigurasi Microsoft di project-survey.config.js dulu.";
+    if (message.includes("Client ID") || message.includes("folder ID")) {
+      return "Draft survey tersimpan. Isi konfigurasi Google di project-survey.config.js dulu.";
     }
 
     if (message.includes("HTTP or HTTPS")) {
-      return "Draft survey tersimpan. Submit Microsoft perlu dibuka lewat HTTP/HTTPS.";
+      return "Draft survey tersimpan. Submit Google perlu dibuka lewat HTTP/HTTPS.";
     }
 
     if (message.includes("login library")) {
-      return "Draft survey tersimpan. Library login Microsoft gagal dimuat.";
+      return "Draft survey tersimpan. Library login Google gagal dimuat.";
     }
 
-    return "Draft survey tersimpan, tetapi submit OneDrive/Outlook belum berhasil.";
+    return "Draft survey tersimpan, tetapi submit Google Drive/Gmail belum berhasil.";
   }
 
   function loadSurvey() {
@@ -1738,9 +1743,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return doc.output("blob");
   }
 
-  async function submitSurveyToMicrosoft(data) {
-    const config = microsoftUploadConfig();
-    const { accessToken, account } = await microsoftGraphAccessToken(config);
+  async function submitSurveyToGoogle(data) {
+    const config = googleUploadConfig();
+    const accessToken = await googleAccessToken(config);
+    const account = await googleUserInfo(accessToken);
 
     setStatus("Menyiapkan file Excel/PDF untuk submit...", "info");
 
@@ -1766,14 +1772,14 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
     const uploadedItems = [];
 
-    setStatus("Mengupload file ke OneDrive...", "info");
+    setStatus("Mengupload file ke Google Drive...", "info");
 
     for (const file of files) {
-      uploadedItems.push(await uploadFileToMicrosoftOneDrive(config, accessToken, file));
+      uploadedItems.push(await uploadFileToGoogleDrive(config, accessToken, file));
     }
 
-    setStatus("Mengirim notifikasi Outlook...", "info");
-    await sendMicrosoftUploadNotification(config, accessToken, account, data, uploadedItems);
+    setStatus("Mengirim notifikasi Gmail...", "info");
+    await sendGoogleUploadNotification(config, accessToken, account, data, uploadedItems);
   }
 
   function buildUploadFileName(data, extension, uploadStamp) {
@@ -1796,30 +1802,29 @@ document.addEventListener("DOMContentLoaded", () => {
     ].join("");
   }
 
-  function microsoftUploadConfig() {
-    const config = globalThis.PROJECT_SURVEY_MICROSOFT_CONFIG;
+  function googleUploadConfig() {
+    const config = globalThis.PROJECT_SURVEY_GOOGLE_CONFIG;
     const options = config && typeof config === "object" ? config : {};
-    const clientId = configTextValue(options.clientId, MICROSOFT_CLIENT_ID_STORAGE_KEY);
-    const folderPath = configTextValue(options.folderPath, MICROSOFT_FOLDER_PATH_STORAGE_KEY);
+    const clientId = configTextValue(options.clientId, GOOGLE_CLIENT_ID_STORAGE_KEY);
+    const folderId = configTextValue(options.folderId, GOOGLE_DRIVE_FOLDER_ID_STORAGE_KEY);
 
     if (!clientId) {
-      throw new Error("Microsoft Client ID is not configured.");
+      throw new Error("Google Client ID is not configured.");
     }
 
-    if (!folderPath) {
-      throw new Error("OneDrive folder path is not configured.");
+    if (!folderId) {
+      throw new Error("Google Drive folder ID is not configured.");
     }
 
     return {
       clientId,
-      tenantId: configTextValue(options.tenantId, MICROSOFT_TENANT_ID_STORAGE_KEY) || "common",
-      folderPath,
-      notifyTo: configTextValue(options.notifyTo, MICROSOFT_NOTIFY_TO_STORAGE_KEY),
-      subjectPrefix: configTextValue(options.subjectPrefix, MICROSOFT_SUBJECT_PREFIX_STORAGE_KEY)
+      folderId,
+      notifyTo: configTextValue(options.notifyTo, GOOGLE_NOTIFY_TO_STORAGE_KEY),
+      subjectPrefix: configTextValue(options.subjectPrefix, GOOGLE_SUBJECT_PREFIX_STORAGE_KEY)
         || "New Project Survey Upload",
       scopes: Array.isArray(options.scopes) && options.scopes.length
         ? options.scopes
-        : MICROSOFT_GRAPH_SCOPES,
+        : GOOGLE_API_SCOPES,
     };
   }
 
@@ -1835,160 +1840,165 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function microsoftGraphAccessToken(config) {
-    const client = await microsoftAuthClient(config);
-    const account = client.getActiveAccount?.() || client.getAllAccounts()[0];
-    const tokenRequest = {
-      scopes: config.scopes,
-      account,
-    };
-
-    if (account) {
-      try {
-        const tokenResponse = await client.acquireTokenSilent(tokenRequest);
-        return { accessToken: tokenResponse.accessToken, account: tokenResponse.account || account };
-      } catch {
-        // Fall back to an interactive popup when the cached token is missing or expired.
-      }
-    }
-
-    const loginResponse = await client.loginPopup({
-      scopes: config.scopes,
-      prompt: "select_account",
-    });
-
-    if (loginResponse.account) {
-      client.setActiveAccount?.(loginResponse.account);
-    }
-
-    if (loginResponse.accessToken) {
-      return { accessToken: loginResponse.accessToken, account: loginResponse.account };
-    }
-
-    const tokenResponse = await client.acquireTokenSilent({
-      scopes: config.scopes,
-      account: loginResponse.account,
-    });
-    return { accessToken: tokenResponse.accessToken, account: tokenResponse.account || loginResponse.account };
-  }
-
-  async function microsoftAuthClient(config) {
+  function googleAccessToken(config) {
     if (globalThis.location?.protocol === "file:") {
-      throw new Error("Microsoft login requires the app to be served over HTTP or HTTPS.");
+      throw new Error("Google login requires the app to be served over HTTP or HTTPS.");
     }
 
-    if (!globalThis.msal?.PublicClientApplication) {
-      throw new Error("Microsoft login library is not available.");
+    if (!globalThis.google?.accounts?.oauth2?.initTokenClient) {
+      throw new Error("Google login library is not available.");
     }
 
-    if (!microsoftAuthClientPromise) {
-      const authorityTenant = encodeURIComponent(config.tenantId || "common");
-      const redirectUri = globalThis.location.href.split("#")[0];
-      const client = new globalThis.msal.PublicClientApplication({
-        auth: {
-          clientId: config.clientId,
-          authority: `https://login.microsoftonline.com/${authorityTenant}`,
-          redirectUri,
+    return new Promise((resolve, reject) => {
+      googleTokenClient = globalThis.google.accounts.oauth2.initTokenClient({
+        client_id: config.clientId,
+        scope: config.scopes.join(" "),
+        callback: (response) => {
+          if (response.error) {
+            reject(new Error(response.error_description || response.error));
+            return;
+          }
+
+          if (!response.access_token) {
+            reject(new Error("Google access token is not available."));
+            return;
+          }
+
+          resolve(response.access_token);
         },
-        cache: {
-          cacheLocation: "sessionStorage",
+        error_callback: (error) => {
+          reject(new Error(error?.message || error?.type || "Google login popup failed."));
         },
       });
 
-      microsoftAuthClientPromise = Promise.resolve(client.initialize?.()).then(() => client);
-    }
-
-    return microsoftAuthClientPromise;
+      googleTokenClient.requestAccessToken({ prompt: "consent" });
+    });
   }
 
-  async function uploadFileToMicrosoftOneDrive(config, accessToken, file) {
-    const response = await fetch(microsoftOneDriveUploadUrl(config.folderPath, file.name), {
-      method: "PUT",
+  async function googleUserInfo(accessToken) {
+    const response = await fetch(GOOGLE_USERINFO_URL, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        "Content-Type": file.contentType,
       },
-      body: file.blob,
     });
-    const data = await readMicrosoftGraphResponse(response);
 
     if (!response.ok) {
-      throw new Error(microsoftGraphErrorMessage(data, `Upload OneDrive gagal untuk ${file.name}.`));
+      return {};
+    }
+
+    return response.json();
+  }
+
+  async function uploadFileToGoogleDrive(config, accessToken, file) {
+    const boundary = googleUploadBoundary();
+    const response = await fetch(
+      `${GOOGLE_DRIVE_UPLOAD_URL}?uploadType=multipart&fields=id,name,size,webViewLink`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": googleMultipartContentType(boundary),
+        },
+        body: googleMultipartUploadBody(config, file, boundary),
+      }
+    );
+    const data = await readGoogleApiResponse(response);
+
+    if (!response.ok) {
+      throw new Error(googleApiErrorMessage(data, `Upload Google Drive gagal untuk ${file.name}.`));
     }
 
     return {
       id: data.id,
       name: data.name || file.name,
       size: data.size || file.blob.size,
-      webUrl: data.webUrl || "",
+      webUrl: data.webViewLink || "",
     };
   }
 
-  function microsoftOneDriveUploadUrl(folderPath, fileName) {
-    return `${MICROSOFT_GRAPH_ROOT}/me/drive/root:/${encodedMicrosoftOneDrivePath(folderPath, fileName)}:/content`;
+  function googleMultipartUploadBody(config, file, boundary) {
+    const metadata = {
+      name: file.name,
+      mimeType: file.contentType,
+      parents: [config.folderId],
+    };
+
+    return new Blob(
+      [
+        `--${boundary}\r\n`,
+        "Content-Type: application/json; charset=UTF-8\r\n\r\n",
+        `${JSON.stringify(metadata)}\r\n`,
+        `--${boundary}\r\n`,
+        `Content-Type: ${file.contentType}\r\n\r\n`,
+        file.blob,
+        `\r\n--${boundary}--`,
+      ],
+      { type: googleMultipartContentType(boundary) }
+    );
   }
 
-  function encodedMicrosoftOneDrivePath(folderPath, fileName) {
-    return [...microsoftFolderPathSegments(folderPath), fileName]
-      .map(encodeURIComponent)
-      .join("/");
+  function googleUploadBoundary() {
+    return `survey_upload_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   }
 
-  function microsoftFolderPathSegments(folderPath) {
-    return String(folderPath || "")
-      .split("/")
-      .map((segment) => segment.trim())
-      .filter(Boolean);
+  function googleMultipartContentType(boundary) {
+    return `multipart/related; boundary=${boundary}`;
   }
 
-  async function sendMicrosoftUploadNotification(config, accessToken, account, data, uploadedItems) {
-    const recipients = microsoftNotificationRecipients(config, account);
+  async function sendGoogleUploadNotification(config, accessToken, account, data, uploadedItems) {
+    const recipients = googleNotificationRecipients(config, account);
 
     if (!recipients.length) {
-      throw new Error("Outlook notification recipient is not configured.");
+      throw new Error("Gmail notification recipient is not configured.");
     }
 
-    const response = await fetch(`${MICROSOFT_GRAPH_ROOT}/me/sendMail`, {
+    const response = await fetch(GOOGLE_GMAIL_SEND_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message: {
-          subject: microsoftEmailSubject(config, data),
-          body: {
-            contentType: "HTML",
-            content: microsoftNotificationHtml(data, uploadedItems),
-          },
-          toRecipients: recipients.map((address) => ({
-            emailAddress: { address },
-          })),
-        },
-        saveToSentItems: true,
+        raw: googleMimeMessage(config, account, recipients, data, uploadedItems),
       }),
     });
-    const responseData = await readMicrosoftGraphResponse(response);
+    const responseData = await readGoogleApiResponse(response);
 
     if (!response.ok) {
-      throw new Error(microsoftGraphErrorMessage(responseData, "Notifikasi Outlook gagal dikirim."));
+      throw new Error(googleApiErrorMessage(responseData, "Notifikasi Gmail gagal dikirim."));
     }
   }
 
-  function microsoftNotificationRecipients(config, account) {
-    return String(config.notifyTo || account?.username || "")
+  function googleNotificationRecipients(config, account) {
+    return String(config.notifyTo || account?.email || "")
       .split(",")
       .map((address) => address.trim())
       .filter(Boolean);
   }
 
-  function microsoftEmailSubject(config, data) {
+  function googleEmailSubject(config, data) {
     const customerName = data.customerName || "Customer";
     const projectName = data.projectName || "Project";
     return `${config.subjectPrefix}: ${customerName} - ${projectName}`;
   }
 
-  function microsoftNotificationHtml(data, uploadedItems) {
+  function googleMimeMessage(config, account, recipients, data, uploadedItems) {
+    const headers = [
+      `To: ${recipients.join(", ")}`,
+      `Subject: ${mimeHeaderValue(googleEmailSubject(config, data))}`,
+      "MIME-Version: 1.0",
+      "Content-Type: text/html; charset=UTF-8",
+      "Content-Transfer-Encoding: 8bit",
+    ];
+
+    if (account?.email) {
+      headers.splice(1, 0, `From: ${account.email}`);
+    }
+
+    return base64UrlEncode(`${headers.join("\r\n")}\r\n\r\n${googleNotificationHtml(data, uploadedItems)}`);
+  }
+
+  function googleNotificationHtml(data, uploadedItems) {
     const fileItems = uploadedItems
       .map((item) => {
         const label = escapeHtml(item.name);
@@ -1999,23 +2009,23 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("");
 
     return [
-      "<p>New Project Survey files have been uploaded to OneDrive.</p>",
+      "<p>New Project Survey files have been uploaded to Google Drive.</p>",
       "<table>",
-      microsoftNotificationTableRow("Tanggal Survey", data.surveyDate),
-      microsoftNotificationTableRow("Nama Surveyor", data.surveyorName),
-      microsoftNotificationTableRow("Nama Customer", data.customerName),
-      microsoftNotificationTableRow("PIC Customer", data.customerPic),
-      microsoftNotificationTableRow("Nama Project", data.projectName),
+      googleNotificationTableRow("Tanggal Survey", data.surveyDate),
+      googleNotificationTableRow("Nama Surveyor", data.surveyorName),
+      googleNotificationTableRow("Nama Customer", data.customerName),
+      googleNotificationTableRow("PIC Customer", data.customerPic),
+      googleNotificationTableRow("Nama Project", data.projectName),
       "</table>",
       `<ul>${fileItems}</ul>`,
     ].join("");
   }
 
-  function microsoftNotificationTableRow(label, value) {
+  function googleNotificationTableRow(label, value) {
     return `<tr><th align="left">${escapeHtml(label)}</th><td>${escapeHtml(value || "-")}</td></tr>`;
   }
 
-  async function readMicrosoftGraphResponse(response) {
+  async function readGoogleApiResponse(response) {
     const text = await response.text();
 
     if (!text) {
@@ -2029,8 +2039,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function microsoftGraphErrorMessage(data, fallback) {
+  function googleApiErrorMessage(data, fallback) {
     return data?.error?.message || data?.error_description || data?.raw || fallback;
+  }
+
+  function mimeHeaderValue(value) {
+    return `=?UTF-8?B?${base64Encode(String(value || ""))}?=`;
+  }
+
+  function base64UrlEncode(value) {
+    return base64Encode(value)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+  }
+
+  function base64Encode(value) {
+    const bytes = new TextEncoder().encode(value);
+    const chunkSize = 0x8000;
+    const chunks = [];
+
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      const chunk = bytes.subarray(index, index + chunkSize);
+      chunks.push(String.fromCharCode(...chunk));
+    }
+
+    return btoa(chunks.join(""));
   }
 
   function escapeHtml(value) {

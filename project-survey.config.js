@@ -1,7 +1,6 @@
-window.PROJECT_SURVEY_MICROSOFT_CONFIG = {
+window.PROJECT_SURVEY_GOOGLE_CONFIG = {
   clientId: "",
-  tenantId: "common",
-  folderPath: "",
+  folderId: "",
   notifyTo: "",
   subjectPrefix: "New Project Survey Upload",
 };

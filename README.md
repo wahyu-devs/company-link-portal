@@ -36,6 +36,10 @@ For the Project Survey submit workflow, serve the app over HTTP(S), create a
 Google Cloud OAuth client, enable Google Drive API and Gmail API, then fill
 `project-survey.config.js`:
 
+Use `project-survey.config.example.js` as the template. The real
+`project-survey.config.js` is ignored by Git so local Google settings and email
+addresses do not get committed.
+
 ```js
 window.PROJECT_SURVEY_GOOGLE_CONFIG = {
   clientId: "your-application-client-id",

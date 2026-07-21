@@ -181,6 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("customerPic").value = state.customerPic ?? "";
     document.getElementById("projectName").value = state.projectName ?? "";
     renderAllSections();
+    updateSubmitAvailability(state);
   }
 
   function renderAllSections() {
@@ -416,6 +417,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function syncStateFromForm(options) {
     state = collectFormData(options);
+    updateSubmitAvailability(state);
     return state;
   }
 
@@ -477,11 +479,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const data = syncStateFromForm({ format: true });
     if (!validateSurvey(data)) {
+      updateSubmitAvailability(data);
+      return;
+    }
+
+    if (!isSurveySaved(data)) {
+      updateSubmitAvailability(data);
+      setStatus("Simpan survey terlebih dahulu sebelum submit.", "warning");
       return;
     }
 
     isSubmittingSurvey = true;
-    submitSurveyButton.disabled = true;
+    updateSubmitAvailability(data);
 
     try {
       setStatus("Login Google untuk submit...", "info");
@@ -491,8 +500,8 @@ document.addEventListener("DOMContentLoaded", () => {
       console.warn("Survey submit failed", error);
       setStatus(surveySubmitErrorMessage(error), "danger");
     } finally {
-      submitSurveyButton.disabled = false;
       isSubmittingSurvey = false;
+      syncStateFromForm();
     }
   }
 
@@ -533,8 +542,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function resetSurvey() {
     state = createEmptySurvey();
-    initializeForm();
     savedSurveySnapshot = "";
+    initializeForm();
     closeSavedSurveyModal();
     scrollSurveyToTop();
     setStatus("Dokumen baru siap diisi.", "success");
@@ -860,10 +869,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function markSurveySaved(data) {
     savedSurveySnapshot = serializeSurvey(data);
+    updateSubmitAvailability(data);
   }
 
   function isSurveySaved(data) {
     return Boolean(savedSurveySnapshot) && serializeSurvey(data) === savedSurveySnapshot;
+  }
+
+  function updateSubmitAvailability(data = state) {
+    const isSaved = isSurveySaved(data);
+    const shouldDisable = isSubmittingSurvey || !isSaved;
+
+    submitSurveyButton.disabled = shouldDisable;
+    submitSurveyButton.setAttribute("aria-disabled", String(shouldDisable));
+    submitSurveyButton.title = isSubmittingSurvey
+      ? "Submit sedang diproses..."
+      : isSaved
+        ? ""
+        : "Save survey terlebih dahulu sebelum submit.";
   }
 
   function serializeSurvey(data) {
@@ -2174,6 +2197,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     normalizePullCable(state.pulls[rowIndex]);
     renderSection("pulls");
+    updateSubmitAvailability(state);
   });
 
   document.querySelectorAll("[data-add-row]").forEach((button) => {
@@ -2182,6 +2206,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const sectionKey = button.dataset.addRow;
       state[sectionKey].push(emptyRow(sectionConfig[sectionKey].columns));
       renderSection(sectionKey);
+      updateSubmitAvailability(state);
     });
   });
 
@@ -2203,7 +2228,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       renderSection(sectionKey);
+      updateSubmitAvailability(state);
     });
+  });
+
+  surveyForm.addEventListener("change", () => {
+    syncStateFromForm();
   });
 
   document.getElementById("saveSurvey").addEventListener("click", saveSurvey);

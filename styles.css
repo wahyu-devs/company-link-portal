@@ -952,6 +952,20 @@ body.survey-page {
   transform: translateY(1px);
 }
 
+.survey-primary-action:disabled,
+.survey-primary-action[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.52;
+  transform: none;
+}
+
+.survey-primary-action:disabled:hover,
+.survey-primary-action[aria-disabled="true"]:hover {
+  background: var(--surface-soft);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
 .survey-table-wrap {
   width: 100%;
   max-width: 100%;
@@ -1309,21 +1323,41 @@ body.survey-page {
   }
 
   .survey-actions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns:
+      minmax(0, 0.75fr)
+      minmax(0, 0.75fr)
+      minmax(0, 0.75fr)
+      minmax(0, 1.35fr)
+      minmax(0, 1.25fr)
+      minmax(0, 0.9fr);
+    gap: 8px;
     padding: 16px;
+  }
+
+  .survey-primary-action {
+    min-height: 46px;
+    padding: 0 8px;
+    gap: 7px;
+    font-size: 13px;
+    white-space: nowrap;
   }
 }
 
 @media (min-width: 1080px) {
   .survey-actions {
     grid-template-columns:
-      repeat(3, minmax(0, 0.95fr))
-      repeat(2, minmax(0, 1.25fr));
+      minmax(0, 0.75fr)
+      minmax(0, 0.75fr)
+      minmax(0, 0.75fr)
+      minmax(0, 1.35fr)
+      minmax(0, 1.25fr)
+      minmax(0, 0.9fr);
+    gap: 10px;
   }
 
   .survey-primary-action {
-    padding: 0 12px;
-    white-space: nowrap;
+    padding: 0 10px;
+    font-size: 14px;
   }
 }
 

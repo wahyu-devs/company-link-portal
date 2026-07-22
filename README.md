@@ -16,7 +16,7 @@ Company Link Portal is a simple static web page designed to help internal users 
 - Favicon and mobile home screen icon support
 - Social sharing preview metadata
 - Static HTML, CSS, and JavaScript with no build process required
-- Project Survey Submit uploads generated Excel/PDF files to Google Drive and sends a Gmail notification with Google OAuth
+- Project Survey Submit sends generated Excel/PDF files as Gmail attachments with Google OAuth
 
 ## Technologies Used
 
@@ -25,7 +25,6 @@ Company Link Portal is a simple static web page designed to help internal users 
 - JavaScript
 - Bootstrap Icons
 - Google Fonts
-- Google Drive API
 - Gmail API
 
 ## Usage
@@ -33,7 +32,7 @@ Company Link Portal is a simple static web page designed to help internal users 
 Open `index.html` directly in a browser, or deploy it to any static hosting service.
 
 For the Project Survey submit workflow, serve the app over HTTP(S), create a
-Google Cloud OAuth client, enable Google Drive API and Gmail API, then fill
+Google Cloud OAuth client, enable Gmail API, then fill
 `project-survey.config.js`:
 
 Use `project-survey.config.example.js` as the template. The real
@@ -43,9 +42,8 @@ addresses do not get committed.
 ```js
 window.PROJECT_SURVEY_GOOGLE_CONFIG = {
   clientId: "your-application-client-id",
-  folderId: "your-google-drive-folder-id",
   notifyTo: "your-email@example.com",
-  subjectPrefix: "New Project Survey Upload",
+  subjectPrefix: "New Project Survey Form",
 };
 ```
 
@@ -55,13 +53,12 @@ testing, add an origin such as `http://localhost:8000`.
 
 Required Google OAuth scopes:
 
-- `https://www.googleapis.com/auth/drive.file`
 - `https://www.googleapis.com/auth/gmail.send`
 - `https://www.googleapis.com/auth/userinfo.email`
 
 The Save button only stores a local draft. The Submit button stores a local
-draft, prompts Google login when needed, uploads the generated Excel/PDF files
-to the configured Google Drive folder, and sends the Gmail notification. This
+draft, prompts Google login when needed, and sends the generated Excel/PDF files
+as Gmail attachments. This
 browser-based setup does not use a client secret.
 
 ## Project Structure

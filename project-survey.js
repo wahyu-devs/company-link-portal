@@ -1,14 +1,11 @@
 const THEME_STORAGE_KEY = "linkPortalTheme";
 const SURVEY_STORAGE_KEY = "projectSurveyFormDraft";
 const GOOGLE_CLIENT_ID_STORAGE_KEY = "projectSurveyGoogleClientId";
-const GOOGLE_DRIVE_FOLDER_ID_STORAGE_KEY = "projectSurveyGoogleDriveFolderId";
 const GOOGLE_NOTIFY_TO_STORAGE_KEY = "projectSurveyGmailNotifyTo";
 const GOOGLE_SUBJECT_PREFIX_STORAGE_KEY = "projectSurveyGmailSubjectPrefix";
-const GOOGLE_DRIVE_UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files";
 const GOOGLE_GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
 const GOOGLE_API_SCOPES = [
-  "https://www.googleapis.com/auth/drive.file",
   "https://www.googleapis.com/auth/gmail.send",
   "https://www.googleapis.com/auth/userinfo.email",
 ];
@@ -490,7 +487,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       setStatus("Login Google untuk submit...", "info");
       await submitSurveyToGoogle(data);
-      setStatus("Submit berhasil. Excel/PDF terupload dan email terkirim.", "success");
+      setStatus("Submit berhasil. Excel/PDF terkirim via email.", "success");
     } catch (error) {
       console.warn("Survey submit failed", error);
       setStatus(surveySubmitErrorMessage(error), "danger");
@@ -502,7 +499,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function surveySubmitErrorMessage(error) {
     const message = String(error?.message || "");
 
-    if (message.includes("Client ID") || message.includes("folder ID")) {
+    if (message.includes("Client ID")) {
       return "Submit belum berhasil. Isi konfigurasi Google di project-survey.config.js dulu.";
     }
 
@@ -514,7 +511,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return "Submit belum berhasil. Library login Google gagal dimuat.";
     }
 
-    return "Submit Google Drive/Gmail belum berhasil.";
+    return "Submit Gmail belum berhasil.";
   }
 
   function loadSurvey() {
@@ -1742,16 +1739,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function submitSurveyToGoogle(data) {
-    const config = googleUploadConfig();
+    const config = googleSubmitConfig();
     const accessToken = await googleAccessToken(config);
     const account = await googleUserInfo(accessToken);
 
-    setStatus("Menyiapkan file Excel/PDF untuk submit...", "info");
+    setStatus("Menyiapkan file Excel/PDF untuk email...", "info");
 
     const createdAt = new Date();
-    const uploadStamp = fileTimestamp(createdAt);
-    const excelFileName = buildUploadFileName(data, "xlsx", uploadStamp);
-    const pdfFileName = buildUploadFileName(data, "pdf", uploadStamp);
+    const emailStamp = fileTimestamp(createdAt);
+    const excelFileName = buildSubmitFileName(data, "xlsx", emailStamp);
+    const pdfFileName = buildSubmitFileName(data, "pdf", emailStamp);
     const [excelBlob, pdfBlob] = await Promise.all([
       buildXlsx(data),
       buildPdfBlob(data),
@@ -1768,22 +1765,15 @@ document.addEventListener("DOMContentLoaded", () => {
         contentType: pdfBlob.type || "application/pdf",
       },
     ];
-    const uploadedItems = [];
 
-    setStatus("Mengupload file ke Google Drive...", "info");
-
-    for (const file of files) {
-      uploadedItems.push(await uploadFileToGoogleDrive(config, accessToken, file));
-    }
-
-    setStatus("Mengirim notifikasi email...", "info");
-    await sendGoogleUploadNotification(config, accessToken, account, data, uploadedItems);
+    setStatus("Mengirim email dengan attachment...", "info");
+    await sendGoogleSurveyNotification(config, accessToken, account, data, files);
   }
 
-  function buildUploadFileName(data, extension, uploadStamp) {
+  function buildSubmitFileName(data, extension, emailStamp) {
     const extensionPattern = new RegExp(`\\.${extension}$`, "i");
     const baseName = buildFileName(data, extension).replace(extensionPattern, "");
-    return `${baseName} - ${uploadStamp}.${extension}`;
+    return `${baseName} - ${emailStamp}.${extension}`;
   }
 
   function fileTimestamp(date) {
@@ -1800,26 +1790,20 @@ document.addEventListener("DOMContentLoaded", () => {
     ].join("");
   }
 
-  function googleUploadConfig() {
+  function googleSubmitConfig() {
     const config = globalThis.PROJECT_SURVEY_GOOGLE_CONFIG;
     const options = config && typeof config === "object" ? config : {};
     const clientId = configTextValue(options.clientId, GOOGLE_CLIENT_ID_STORAGE_KEY);
-    const folderId = configTextValue(options.folderId, GOOGLE_DRIVE_FOLDER_ID_STORAGE_KEY);
 
     if (!clientId) {
       throw new Error("Google Client ID is not configured.");
     }
 
-    if (!folderId) {
-      throw new Error("Google Drive folder ID is not configured.");
-    }
-
     return {
       clientId,
-      folderId,
       notifyTo: configTextValue(options.notifyTo, GOOGLE_NOTIFY_TO_STORAGE_KEY),
       subjectPrefix: configTextValue(options.subjectPrefix, GOOGLE_SUBJECT_PREFIX_STORAGE_KEY)
-        || "New Project Survey Upload",
+        || "New Project Survey Form",
       scopes: Array.isArray(options.scopes) && options.scopes.length
         ? options.scopes
         : GOOGLE_API_SCOPES,
@@ -1887,63 +1871,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return response.json();
   }
 
-  async function uploadFileToGoogleDrive(config, accessToken, file) {
-    const boundary = googleUploadBoundary();
-    const response = await fetch(
-      `${GOOGLE_DRIVE_UPLOAD_URL}?uploadType=multipart&fields=id,name,size,webViewLink`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": googleMultipartContentType(boundary),
-        },
-        body: googleMultipartUploadBody(config, file, boundary),
-      }
-    );
-    const data = await readGoogleApiResponse(response);
-
-    if (!response.ok) {
-      throw new Error(googleApiErrorMessage(data, `Upload Google Drive gagal untuk ${file.name}.`));
-    }
-
-    return {
-      id: data.id,
-      name: data.name || file.name,
-      size: data.size || file.blob.size,
-      webUrl: data.webViewLink || "",
-    };
-  }
-
-  function googleMultipartUploadBody(config, file, boundary) {
-    const metadata = {
-      name: file.name,
-      mimeType: file.contentType,
-      parents: [config.folderId],
-    };
-
-    return new Blob(
-      [
-        `--${boundary}\r\n`,
-        "Content-Type: application/json; charset=UTF-8\r\n\r\n",
-        `${JSON.stringify(metadata)}\r\n`,
-        `--${boundary}\r\n`,
-        `Content-Type: ${file.contentType}\r\n\r\n`,
-        file.blob,
-        `\r\n--${boundary}--`,
-      ],
-      { type: googleMultipartContentType(boundary) }
-    );
-  }
-
-  function googleUploadBoundary() {
-    return `survey_upload_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-  }
-
-  function googleMultipartContentType(boundary) {
-    return `multipart/related; boundary=${boundary}`;
-  }
-
-  async function sendGoogleUploadNotification(config, accessToken, account, data, uploadedItems) {
+  async function sendGoogleSurveyNotification(config, accessToken, account, data, files) {
     const recipients = googleNotificationRecipients(config, account);
 
     if (!recipients.length) {
@@ -1957,7 +1885,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        raw: googleMimeMessage(config, account, recipients, data, uploadedItems),
+        raw: await googleMimeMessage(config, account, recipients, data, files),
       }),
     });
     const responseData = await readGoogleApiResponse(response);
@@ -1980,24 +1908,53 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${config.subjectPrefix}: ${customerName} - ${projectName}`;
   }
 
-  function googleMimeMessage(config, account, recipients, data, uploadedItems) {
+  async function googleMimeMessage(config, account, recipients, data, files) {
+    const boundary = googleMimeBoundary();
     const headers = [
       `To: ${recipients.join(", ")}`,
       `Subject: ${mimeHeaderValue(googleEmailSubject(config, data))}`,
       "MIME-Version: 1.0",
-      "Content-Type: text/html; charset=UTF-8",
-      "Content-Transfer-Encoding: 8bit",
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
     ];
 
     if (account?.email) {
       headers.splice(1, 0, `From: ${account.email}`);
     }
 
-    return base64UrlEncode(`${headers.join("\r\n")}\r\n\r\n${googleNotificationHtml(data, uploadedItems)}`);
+    const attachmentParts = await Promise.all(
+      files.map((file) => googleAttachmentPart(file, boundary))
+    );
+    const parts = [
+      `--${boundary}\r\n`,
+      "Content-Type: text/html; charset=UTF-8\r\n",
+      "Content-Transfer-Encoding: 8bit\r\n\r\n",
+      `${googleNotificationHtml(data, files)}\r\n`,
+      ...attachmentParts,
+      `--${boundary}--`,
+    ];
+
+    return base64UrlEncode(`${headers.join("\r\n")}\r\n\r\n${parts.join("")}`);
   }
 
-  function googleNotificationHtml(data, uploadedItems) {
-    const fileItems = uploadedItems
+  async function googleAttachmentPart(file, boundary) {
+    const encodedFileName = mimeEncodedFileName(file.name);
+    const fileBase64 = splitBase64Lines(arrayBufferToBase64(await file.blob.arrayBuffer()));
+
+    return [
+      `--${boundary}\r\n`,
+      `Content-Type: ${file.contentType}; name="${mimeQuotedString(file.name)}"\r\n`,
+      "Content-Transfer-Encoding: base64\r\n",
+      `Content-Disposition: attachment; filename="${mimeQuotedString(file.name)}"; filename*=UTF-8''${encodedFileName}\r\n\r\n`,
+      `${fileBase64}\r\n`,
+    ].join("");
+  }
+
+  function googleMimeBoundary() {
+    return `survey_email_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
+
+  function googleNotificationHtml(data, files) {
+    const fileItems = files
       .map(googleNotificationFileCard)
       .join("");
     const customerName = escapeHtml(data.customerName || "Customer");
@@ -2021,7 +1978,7 @@ document.addEventListener("DOMContentLoaded", () => {
       '</div>',
       '<div style="padding:24px;">',
       '<p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#b9b9b9;">',
-      'A new project survey form has been submitted. The Excel and PDF files are now available in Google Drive.',
+      'A new project survey form has been submitted. The Excel and PDF files are attached to this email.',
       '</p>',
       '<div style="margin:0 0 22px;padding:16px;background:#101010;border:1px solid #2a2a2a;border-radius:12px;">',
       `<p style="margin:0;font-size:19px;line-height:1.35;font-weight:700;color:#f6f6f6;">${customerName}</p>`,
@@ -2035,7 +1992,7 @@ document.addEventListener("DOMContentLoaded", () => {
       googleNotificationTableRow("Customer PIC", data.customerPic),
       googleNotificationTableRow("Project Name", data.projectName),
       "</div>",
-      '<p style="margin:0 0 10px;font-size:13px;line-height:1.4;font-weight:700;color:#f6f6f6;">Uploaded Files</p>',
+      '<p style="margin:0 0 10px;font-size:13px;line-height:1.4;font-weight:700;color:#f6f6f6;">Attached Files</p>',
       `<div style="display:block;margin:0 0 22px;">${fileItems}</div>`,
       '<p style="margin:0;padding-top:16px;border-top:1px solid #2a2a2a;font-size:12px;line-height:1.5;color:#818181;">',
       'This email was sent automatically from Project Survey Form.',
@@ -2048,21 +2005,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function googleNotificationFileCard(item) {
     const label = escapeHtml(item.name);
-
-    if (item.webUrl) {
-      return [
-        '<div style="margin:0 0 10px;padding:13px 14px;border:1px solid #2a2a2a;border-radius:10px;background:#101010;">',
-        `<a href="${escapeHtml(item.webUrl)}" style="display:block;font-size:14px;line-height:1.45;font-weight:700;color:#60a5fa;text-decoration:none;">${label}</a>`,
-        '<p style="margin:5px 0 0;font-size:12px;line-height:1.45;color:#818181;">Open file in Google Drive</p>',
-        '</div>',
-      ].join("");
-    }
+    const size = formatFileSize(item.blob?.size);
 
     return [
       '<div style="margin:0 0 10px;padding:13px 14px;border:1px solid #2a2a2a;border-radius:10px;background:#101010;">',
       `<p style="margin:0;font-size:14px;line-height:1.45;font-weight:700;color:#f6f6f6;">${label}</p>`,
+      `<p style="margin:5px 0 0;font-size:12px;line-height:1.45;color:#818181;">Attached to this email${size ? ` - ${size}` : ""}</p>`,
       '</div>',
     ].join("");
+  }
+
+  function formatFileSize(size) {
+    if (!Number.isFinite(size) || size <= 0) {
+      return "";
+    }
+
+    const units = ["B", "KB", "MB"];
+    let value = size;
+    let unitIndex = 0;
+
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024;
+      unitIndex += 1;
+    }
+
+    if (unitIndex === 0) {
+      return `${value} ${units[unitIndex]}`;
+    }
+
+    return `${value.toFixed(value >= 10 ? 1 : 2).replace(/\.0+$/g, "")} ${units[unitIndex]}`;
   }
 
   function googleNotificationTableRow(label, value) {
@@ -2114,6 +2085,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function mimeHeaderValue(value) {
     return `=?UTF-8?B?${base64Encode(String(value || ""))}?=`;
+  }
+
+  function mimeQuotedString(value) {
+    return String(value || "")
+      .replace(/[\r\n]+/g, " ")
+      .replace(/\\/g, "\\\\")
+      .replace(/"/g, '\\"');
+  }
+
+  function mimeEncodedFileName(value) {
+    return encodeURIComponent(String(value || "attachment"))
+      .replace(/[!'()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
+  }
+
+  function splitBase64Lines(value) {
+    return String(value || "").match(/.{1,76}/g)?.join("\r\n") || "";
   }
 
   function base64UrlEncode(value) {

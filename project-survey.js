@@ -1906,7 +1906,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `--${boundary}\r\n`,
       "Content-Type: text/html; charset=UTF-8\r\n",
       "Content-Transfer-Encoding: 8bit\r\n\r\n",
-      `${googleNotificationHtml(data, files)}\r\n`,
+      `${googleNotificationHtml(data)}\r\n`,
       ...attachmentParts,
       `--${boundary}--`,
     ];
@@ -1931,10 +1931,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return `survey_email_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   }
 
-  function googleNotificationHtml(data, files) {
-    const fileItems = files
-      .map(googleNotificationFileCard)
-      .join("");
+  function googleNotificationHtml(data) {
     const customerName = escapeHtml(data.customerName || "Customer");
     const projectName = escapeHtml(data.projectName || "Project");
 
@@ -1962,7 +1959,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `<p style="margin:0;font-size:19px;line-height:1.35;font-weight:700;color:#f6f6f6;">${customerName}</p>`,
       `<p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:#b9b9b9;">${projectName}</p>`,
       '</div>',
-      '<p style="margin:0 0 10px;font-size:13px;line-height:1.4;font-weight:700;color:#f6f6f6;">Survey Details</p>',
+      '<p style="margin:0 0 10px;font-size:13px;line-height:1.4;font-weight:700;color:#f6f6f6;">Survey Information</p>',
       '<div style="display:block;margin:0 0 22px;">',
       googleNotificationTableRow("Survey Date", formatEmailSurveyDate(data.surveyDate)),
       googleNotificationTableRow("Surveyor", data.surveyorName),
@@ -1970,23 +1967,11 @@ document.addEventListener("DOMContentLoaded", () => {
       googleNotificationTableRow("Customer PIC", data.customerPic),
       googleNotificationTableRow("Project Name", data.projectName),
       "</div>",
-      '<p style="margin:0 0 10px;font-size:13px;line-height:1.4;font-weight:700;color:#f6f6f6;">Attached Files</p>',
-      `<div style="display:block;margin:0 0 22px;">${fileItems}</div>`,
       '<p style="margin:0;padding-top:16px;border-top:1px solid #2a2a2a;font-size:12px;line-height:1.5;color:#818181;">',
       'This email was sent automatically from Project Survey Form.',
       '</p>',
       '</div>',
       '</div>',
-      '</div>',
-    ].join("");
-  }
-
-  function googleNotificationFileCard(item) {
-    const label = escapeHtml(item.name);
-
-    return [
-      '<div style="margin:0 0 10px;padding:13px 14px;border:1px solid #2a2a2a;border-radius:10px;background:#101010;">',
-      `<p style="margin:0;font-size:14px;line-height:1.45;font-weight:700;color:#f6f6f6;">${label}</p>`,
       '</div>',
     ].join("");
   }

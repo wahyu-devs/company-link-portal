@@ -2010,7 +2010,7 @@ document.addEventListener("DOMContentLoaded", () => {
       '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 18px;">',
       '<tr>',
       '<td style="padding:0;vertical-align:top;text-align:left;">',
-      '<img src="https://perkom-portal.vercel.app/assets/images/perkom-loading.png" width="132" height="52" alt="Perkom" style="display:block;width:132px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">',
+      '<img src="https://perkom-portal.vercel.app/assets/images/perkom-loading.png" width="168" height="66" alt="Perkom" style="display:block;width:168px;max-width:100%;height:auto;margin-left:-28px;border:0;outline:none;text-decoration:none;">',
       '</td>',
       '<td style="padding:0;vertical-align:top;text-align:right;">',
       '<div style="display:inline-block;margin:0;padding:7px 10px;border:1px solid rgba(96, 165, 250, 0.48);border-radius:999px;background:rgba(59, 130, 246, 0.14);color:#60a5fa;font-size:12px;font-weight:700;">New Upload</div>',

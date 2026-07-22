@@ -952,20 +952,6 @@ body.survey-page {
   transform: translateY(1px);
 }
 
-.survey-primary-action:disabled,
-.survey-primary-action[aria-disabled="true"] {
-  cursor: not-allowed;
-  opacity: 0.52;
-  transform: none;
-}
-
-.survey-primary-action:disabled:hover,
-.survey-primary-action[aria-disabled="true"]:hover {
-  background: var(--surface-soft);
-  border-color: var(--border);
-  color: var(--text-muted);
-}
-
 .survey-table-wrap {
   width: 100%;
   max-width: 100%;

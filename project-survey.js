@@ -1745,10 +1745,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setStatus("Menyiapkan file Excel/PDF untuk email...", "info");
 
-    const createdAt = new Date();
-    const emailStamp = fileTimestamp(createdAt);
-    const excelFileName = buildSubmitFileName(data, "xlsx", emailStamp);
-    const pdfFileName = buildSubmitFileName(data, "pdf", emailStamp);
+    const excelFileName = buildFileName(data, "xlsx");
+    const pdfFileName = buildFileName(data, "pdf");
     const [excelBlob, pdfBlob] = await Promise.all([
       buildXlsx(data),
       buildPdfBlob(data),
@@ -1768,26 +1766,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setStatus("Mengirim email dengan attachment...", "info");
     await sendGoogleSurveyNotification(config, accessToken, account, data, files);
-  }
-
-  function buildSubmitFileName(data, extension, emailStamp) {
-    const extensionPattern = new RegExp(`\\.${extension}$`, "i");
-    const baseName = buildFileName(data, extension).replace(extensionPattern, "");
-    return `${baseName} - ${emailStamp}.${extension}`;
-  }
-
-  function fileTimestamp(date) {
-    const pad = (value) => String(value).padStart(2, "0");
-
-    return [
-      date.getFullYear(),
-      pad(date.getMonth() + 1),
-      pad(date.getDate()),
-      "-",
-      pad(date.getHours()),
-      pad(date.getMinutes()),
-      pad(date.getSeconds()),
-    ].join("");
   }
 
   function googleSubmitConfig() {

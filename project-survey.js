@@ -1983,35 +1983,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function googleNotificationFileCard(item) {
     const label = escapeHtml(item.name);
-    const size = formatFileSize(item.blob?.size);
 
     return [
       '<div style="margin:0 0 10px;padding:13px 14px;border:1px solid #2a2a2a;border-radius:10px;background:#101010;">',
       `<p style="margin:0;font-size:14px;line-height:1.45;font-weight:700;color:#f6f6f6;">${label}</p>`,
-      `<p style="margin:5px 0 0;font-size:12px;line-height:1.45;color:#818181;">Attached to this email${size ? ` - ${size}` : ""}</p>`,
       '</div>',
     ].join("");
-  }
-
-  function formatFileSize(size) {
-    if (!Number.isFinite(size) || size <= 0) {
-      return "";
-    }
-
-    const units = ["B", "KB", "MB"];
-    let value = size;
-    let unitIndex = 0;
-
-    while (value >= 1024 && unitIndex < units.length - 1) {
-      value /= 1024;
-      unitIndex += 1;
-    }
-
-    if (unitIndex === 0) {
-      return `${value} ${units[unitIndex]}`;
-    }
-
-    return `${value.toFixed(value >= 10 ? 1 : 2).replace(/\.0+$/g, "")} ${units[unitIndex]}`;
   }
 
   function googleNotificationTableRow(label, value) {

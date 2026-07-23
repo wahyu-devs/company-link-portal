@@ -449,17 +449,31 @@ document.addEventListener("DOMContentLoaded", () => {
   function saveSurveyLocally(data) {
     try {
       const savedSurveys = readSavedSurveys();
+      const draftKey = savedSurveyKey(data);
+      const existingDraft = draftKey
+        ? savedSurveys.find((item) => savedSurveyKey(item.data) === draftKey)
+        : null;
       const draft = {
-        id: createDraftId(),
+        id: existingDraft?.id || createDraftId(),
         savedAt: new Date().toISOString(),
         data: cloneSurvey(data),
       };
+      const nextSurveys = draftKey
+        ? [
+          draft,
+          ...savedSurveys.filter((item) => savedSurveyKey(item.data) !== draftKey),
+        ]
+        : [draft, ...savedSurveys];
 
-      savedSurveys.unshift(draft);
-      writeSavedSurveys(savedSurveys);
-      renderSavedSurveys(savedSurveys);
+      writeSavedSurveys(nextSurveys);
+      renderSavedSurveys(nextSurveys);
       markSurveySaved(data);
-      setStatus("Draft survey berhasil disimpan.", "success");
+      setStatus(
+        existingDraft
+          ? "Draft survey berhasil diperbarui."
+          : "Draft survey berhasil disimpan.",
+        "success"
+      );
       return true;
     } catch {
       setStatus("Draft survey belum bisa disimpan di browser ini.", "danger");
@@ -627,13 +641,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const parsed = JSON.parse(savedSurvey);
     if (Array.isArray(parsed)) {
-      return parsed
+      const normalizedSurveys = parsed
         .filter((draft) => draft && typeof draft === "object")
         .map((draft, index) => ({
           id: draft.id || `saved-survey-${index}`,
           savedAt: draft.savedAt || "",
           data: normalizeSurvey(draft.data),
         }));
+
+      return dedupeSavedSurveys(normalizedSurveys);
     }
 
     return [
@@ -647,6 +663,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function writeSavedSurveys(savedSurveys) {
     localStorage.setItem(SURVEY_STORAGE_KEY, JSON.stringify(savedSurveys));
+  }
+
+  function dedupeSavedSurveys(savedSurveys) {
+    const seenKeys = new Set();
+
+    return savedSurveys.filter((draft) => {
+      const key = savedSurveyKey(draft.data);
+
+      if (!key) {
+        return true;
+      }
+
+      if (seenKeys.has(key)) {
+        return false;
+      }
+
+      seenKeys.add(key);
+      return true;
+    });
+  }
+
+  function savedSurveyKey(data) {
+    const customerName = savedSurveyKeyPart(data?.customerName);
+    const projectName = savedSurveyKeyPart(data?.projectName);
+
+    return customerName && projectName
+      ? `${customerName}\u001f${projectName}`
+      : "";
+  }
+
+  function savedSurveyKeyPart(value) {
+    return String(value || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLowerCase();
   }
 
   function renderSavedSurveys(savedSurveys = readSavedSurveys(), query = savedSurveySearch.value) {

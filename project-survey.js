@@ -1476,7 +1476,7 @@ document.addEventListener("DOMContentLoaded", () => {
       cellPaddingX: 4,
     },
     fullTableWidth: 554.76,
-    itemTableWidth: 554.76,
+    itemTableWidth: 367.8,
     pullColumns: [
       { label: "No", width: 34.04, align: "center", key: "no" },
       { label: "Jenis Tarikan", width: 123.28, align: "center", key: "type" },
@@ -1488,10 +1488,10 @@ document.addEventListener("DOMContentLoaded", () => {
     ],
     itemColumns: [
       { label: "No", width: 34.04, align: "center", key: "no" },
-      { label: "Deskripsi", width: 200, align: "left", key: "description", wrap: true },
+      { label: "Deskripsi", width: 123.28, align: "left", key: "description", wrap: true },
       { label: "Qty", width: 66.24, align: "center", key: "qty" },
       { label: "Satuan", width: 66.24, align: "center", key: "unit" },
-      { label: "Catatan", width: 188.24, align: "left", key: "note", wrap: true },
+      { label: "Catatan", width: 78, align: "left", key: "note", wrap: true },
     ],
   };
 

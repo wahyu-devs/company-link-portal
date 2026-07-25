@@ -82,9 +82,9 @@ document.addEventListener("DOMContentLoaded", () => {
     customerPic: "",
     projectName: "",
     pulls: [{ type: "", qty: "", unit: "", cable: "", location: "", note: "" }],
-    activeDevices: [{ description: "", qty: "", unit: "" }],
-    materials: [{ description: "", qty: "", unit: "" }],
-    extras: [{ description: "", qty: "", unit: "" }],
+    activeDevices: [{ description: "", qty: "", unit: "", note: "" }],
+    materials: [{ description: "", qty: "", unit: "", note: "" }],
+    extras: [{ description: "", qty: "", unit: "", note: "" }],
   };
 
   const sectionConfig = {
@@ -139,6 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
       { key: "description", label: "Deskripsi", input: "text" },
       { key: "qty", label: "Qty", input: "number" },
       { key: "unit", label: "Satuan", input: "select", options: unitOptions },
+      { key: "note", label: "Catatan", input: "text" },
     ];
   }
 
@@ -1062,8 +1063,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return `<row ${attrs.join(" ")}>${cells.join("")}</row>`;
   }
 
-  function rowHeightForDescription(description) {
-    return String(description ?? "").length > 24 ? 30 : 15;
+  function rowHeightForTextValues(...values) {
+    return values.some((value) => String(value ?? "").length > 24) ? 30 : 15;
   }
 
   function worksheetColumnWidth(values, { min = 18, max = 36 } = {}) {
@@ -1088,6 +1089,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const noteColumnWidth = worksheetColumnWidth(
       ["Catatan", ...data.pulls.map((pull) => pull.note)],
       { min: 24, max: 42 }
+    );
+    const itemNoteColumnWidth = worksheetColumnWidth(
+      [
+        "Catatan",
+        ...data.activeDevices.map((item) => item.note),
+        ...data.materials.map((item) => item.note),
+        ...data.extras.map((item) => item.note),
+      ],
+      { min: 16, max: 42 }
     );
     let rowNumber = 6;
 
@@ -1130,7 +1140,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const lastRow = rowNumber - 1;
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac xr xr2 xr3" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xmlns:xr2="http://schemas.microsoft.com/office/spreadsheetml/2015/revision2" xmlns:xr3="http://schemas.microsoft.com/office/spreadsheetml/2016/revision3" xr:uid="{00000000-0001-0000-0000-000000000000}"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A6:G${lastRow}"/><sheetViews><sheetView tabSelected="1" zoomScale="120" zoomScaleNormal="120" workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews><sheetFormatPr baseColWidth="10" defaultColWidth="8.83203125" defaultRowHeight="14" x14ac:dyDescent="0.15"/><cols><col min="1" max="1" width="6" style="12" customWidth="1"/><col min="2" max="2" width="22.33203125" style="12" customWidth="1"/><col min="3" max="4" width="10" style="12" customWidth="1"/><col min="5" max="5" width="16" style="12" customWidth="1"/><col min="6" max="6" width="${locationColumnWidth}" style="12" customWidth="1"/><col min="7" max="7" width="${noteColumnWidth}" style="12" customWidth="1"/><col min="8" max="16384" width="8.83203125" style="12"/></cols><sheetData>${rows.join("")}</sheetData><mergeCells count="1"><mergeCell ref="A6:G6"/></mergeCells><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/><pageSetup scale="85" orientation="portrait" horizontalDpi="4294967295" verticalDpi="4294967295"/><drawing r:id="rId1"/></worksheet>`;
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac xr xr2 xr3" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xmlns:xr2="http://schemas.microsoft.com/office/spreadsheetml/2015/revision2" xmlns:xr3="http://schemas.microsoft.com/office/spreadsheetml/2016/revision3" xr:uid="{00000000-0001-0000-0000-000000000000}"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A6:G${lastRow}"/><sheetViews><sheetView tabSelected="1" zoomScale="120" zoomScaleNormal="120" workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews><sheetFormatPr baseColWidth="10" defaultColWidth="8.83203125" defaultRowHeight="14" x14ac:dyDescent="0.15"/><cols><col min="1" max="1" width="6" style="12" customWidth="1"/><col min="2" max="2" width="22.33203125" style="12" customWidth="1"/><col min="3" max="4" width="10" style="12" customWidth="1"/><col min="5" max="5" width="${itemNoteColumnWidth}" style="12" customWidth="1"/><col min="6" max="6" width="${locationColumnWidth}" style="12" customWidth="1"/><col min="7" max="7" width="${noteColumnWidth}" style="12" customWidth="1"/><col min="8" max="16384" width="8.83203125" style="12"/></cols><sheetData>${rows.join("")}</sheetData><mergeCells count="1"><mergeCell ref="A6:G6"/></mergeCells><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/><pageSetup scale="85" orientation="portrait" horizontalDpi="4294967295" verticalDpi="4294967295"/><drawing r:id="rId1"/></worksheet>`;
   }
 
   function appendPullSection(rows, rowNumber, pulls) {
@@ -1175,8 +1185,9 @@ document.addEventListener("DOMContentLoaded", () => {
       cell(`B${rowNumber}`, 1, "Deskripsi"),
       cell(`C${rowNumber}`, 5, "Qty"),
       cell(`D${rowNumber}`, 1, "Satuan"),
-      cell(`E${rowNumber}`, 10, ""),
+      cell(`E${rowNumber}`, 1, "Catatan"),
       cell(`F${rowNumber}`, 10, ""),
+      cell(`G${rowNumber}`, 10, ""),
     ], { height: 15, customHeight: true }));
     rowNumber += 1;
 
@@ -1186,9 +1197,10 @@ document.addEventListener("DOMContentLoaded", () => {
         cell(`B${rowNumber}`, 3, item.description),
         cell(`C${rowNumber}`, 2, item.qty),
         cell(`D${rowNumber}`, 7, item.unit),
-        cell(`E${rowNumber}`, 11, ""),
+        cell(`E${rowNumber}`, 8, item.note),
         cell(`F${rowNumber}`, 11, ""),
-      ], { height: rowHeightForDescription(item.description) }));
+        cell(`G${rowNumber}`, 11, ""),
+      ], { height: rowHeightForTextValues(item.description, item.note) }));
       rowNumber += 1;
     });
 
@@ -1464,7 +1476,7 @@ document.addEventListener("DOMContentLoaded", () => {
       cellPaddingX: 4,
     },
     fullTableWidth: 554.76,
-    itemTableWidth: 289.8,
+    itemTableWidth: 554.76,
     pullColumns: [
       { label: "No", width: 34.04, align: "center", key: "no" },
       { label: "Jenis Tarikan", width: 123.28, align: "center", key: "type" },
@@ -1476,9 +1488,10 @@ document.addEventListener("DOMContentLoaded", () => {
     ],
     itemColumns: [
       { label: "No", width: 34.04, align: "center", key: "no" },
-      { label: "Deskripsi", width: 123.28, align: "left", key: "description", wrap: true },
+      { label: "Deskripsi", width: 200, align: "left", key: "description", wrap: true },
       { label: "Qty", width: 66.24, align: "center", key: "qty" },
       { label: "Satuan", width: 66.24, align: "center", key: "unit" },
+      { label: "Catatan", width: 188.24, align: "left", key: "note", wrap: true },
     ],
   };
 
@@ -1572,6 +1585,7 @@ document.addEventListener("DOMContentLoaded", () => {
         description: row.description,
         qty: row.qty,
         unit: row.unit,
+        note: row.note,
       })),
     });
   }

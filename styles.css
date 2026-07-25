@@ -700,6 +700,10 @@ body:not(.survey-page) .footer {
     max-width: 860px;
   }
 
+  .survey-page .page-container {
+    max-width: 1120px;
+  }
+
   .link-card {
     grid-template-columns: 42px minmax(0, 1fr) auto;
     gap: 14px;

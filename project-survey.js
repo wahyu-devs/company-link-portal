@@ -752,7 +752,7 @@ document.addEventListener("DOMContentLoaded", () => {
       deleteButton.className = "survey-list-action survey-list-action-danger";
       deleteButton.type = "button";
       deleteButton.dataset.deleteSaved = draft.id;
-      deleteButton.innerHTML = `<i class="bi bi-trash" aria-hidden="true"></i><span>Hapus</span>`;
+      deleteButton.innerHTML = `<i class="bi bi-trash" aria-hidden="true"></i><span>Delete</span>`;
 
       item.append(text, loadButton, deleteButton);
       fragment.appendChild(item);

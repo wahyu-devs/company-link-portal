@@ -314,6 +314,27 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  function addSectionRow(sectionKey, { focusNewRow = false } = {}) {
+    if (!sectionConfig[sectionKey]) {
+      return;
+    }
+
+    syncStateFromForm();
+    state[sectionKey].push(emptyRow(sectionConfig[sectionKey].columns));
+    renderSection(sectionKey);
+
+    if (focusNewRow) {
+      focusSectionRow(sectionKey, state[sectionKey].length - 1);
+    }
+  }
+
+  function focusSectionRow(sectionKey, rowIndex) {
+    const row = sectionConfig[sectionKey].target.querySelector(
+      `.survey-row[data-row-index="${rowIndex}"]`
+    );
+    row?.querySelector("input, select")?.focus();
+  }
+
   function collectFormData({ format = false } = {}) {
     const data = {
       surveyDate: document.getElementById("surveyDate").value,
@@ -2187,10 +2208,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll("[data-add-row]").forEach((button) => {
     button.addEventListener("click", () => {
-      syncStateFromForm();
-      const sectionKey = button.dataset.addRow;
-      state[sectionKey].push(emptyRow(sectionConfig[sectionKey].columns));
-      renderSection(sectionKey);
+      addSectionRow(button.dataset.addRow);
+    });
+  });
+
+  document.querySelectorAll("[data-section]").forEach((section) => {
+    section.addEventListener("keydown", (event) => {
+      const target = event.target;
+      const isRowControl = target instanceof HTMLInputElement || target instanceof HTMLSelectElement;
+
+      if (
+        event.key !== "Enter"
+        || event.isComposing
+        || event.altKey
+        || event.ctrlKey
+        || event.metaKey
+        || event.shiftKey
+        || !isRowControl
+        || !target.closest(".survey-row:not(.survey-row-header)")
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      addSectionRow(section.dataset.section, { focusNewRow: true });
     });
   });
 

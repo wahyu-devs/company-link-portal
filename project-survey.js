@@ -1616,8 +1616,8 @@ document.addEventListener("DOMContentLoaded", () => {
       doc.text(
         column.label,
         x + column.width / 2,
-        config.topY + PDF_LAYOUT.table.headerTextOffsetY,
-        { align: "center" }
+        config.topY + (headerHeight / 2),
+        { align: "center", baseline: "middle" }
       );
       x += column.width;
     });
@@ -1670,19 +1670,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const textX = align === "left"
       ? cellX + PDF_LAYOUT.table.cellPaddingX
       : cellX + column.width / 2;
-    const textY = rowY + Math.min(PDF_LAYOUT.table.bodyTextOffsetY, rowHeight - 3);
+    const lines = column.wrap
+      ? wrapPdfText(doc, value, getPdfTextMaxWidth(column))
+      : [fitText(doc, value, getPdfTextMaxWidth(column))];
+    const firstLineY = getPdfCenteredLineY(rowY, rowHeight, lines.length, 0);
 
-    if (!column.wrap) {
-      const text = fitText(doc, value, getPdfTextMaxWidth(column));
-      doc.text(String(text), textX, textY, { align });
-      return;
-    }
-
-    wrapPdfText(doc, value, getPdfTextMaxWidth(column)).forEach((line, lineIndex) => {
-      doc.text(String(line), textX, textY + (lineIndex * PDF_LAYOUT.table.bodyLineHeight), {
+    lines.forEach((line, lineIndex) => {
+      doc.text(String(line), textX, firstLineY + (lineIndex * PDF_LAYOUT.table.bodyLineHeight), {
         align,
+        baseline: "middle",
       });
     });
+  }
+
+  function getPdfCenteredLineY(rowY, rowHeight, lineCount, lineIndex) {
+    const textBlockHeight = (Math.max(1, lineCount) - 1) * PDF_LAYOUT.table.bodyLineHeight;
+    return rowY + (rowHeight / 2) - (textBlockHeight / 2)
+      + (lineIndex * PDF_LAYOUT.table.bodyLineHeight);
   }
 
   function getPdfTextMaxWidth(column) {

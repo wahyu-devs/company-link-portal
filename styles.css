@@ -1314,9 +1314,12 @@ body.survey-page {
 
   .survey-actions {
     grid-template-columns:
-      repeat(3, minmax(0, 1fr))
-      repeat(2, minmax(128px, 0.72fr))
-      minmax(0, 1fr);
+      minmax(0, 0.75fr)
+      minmax(0, 0.75fr)
+      minmax(0, 0.75fr)
+      minmax(0, 1.35fr)
+      minmax(0, 1.25fr)
+      minmax(0, 0.9fr);
     gap: 8px;
     padding: 16px;
   }
@@ -1333,9 +1336,12 @@ body.survey-page {
 @media (min-width: 1080px) {
   .survey-actions {
     grid-template-columns:
-      repeat(3, minmax(0, 1fr))
-      repeat(2, minmax(128px, 0.72fr))
-      minmax(0, 1fr);
+      minmax(0, 0.75fr)
+      minmax(0, 0.75fr)
+      minmax(0, 0.75fr)
+      minmax(0, 1.35fr)
+      minmax(0, 1.25fr)
+      minmax(0, 0.9fr);
     gap: 10px;
   }
 

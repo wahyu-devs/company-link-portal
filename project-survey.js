@@ -1099,15 +1099,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "Catatan",
       ...data.pulls.map((pull) => pull.note),
     ]);
-    const itemNoteColumnWidth = worksheetColumnWidth(
-      [
-        "Catatan",
-        ...data.activeDevices.map((item) => item.note),
-        ...data.materials.map((item) => item.note),
-        ...data.extras.map((item) => item.note),
-      ],
-      { min: 16, max: 42 }
-    );
+    const itemNoteColumnWidth = 16;
     let rowNumber = 6;
 
     rows.push(rowXml(rowNumber, [
@@ -1206,7 +1198,7 @@ document.addEventListener("DOMContentLoaded", () => {
         cell(`B${rowNumber}`, 3, item.description),
         cell(`C${rowNumber}`, 2, item.qty),
         cell(`D${rowNumber}`, 7, item.unit),
-        cell(`E${rowNumber}`, 8, item.note),
+        cell(`E${rowNumber}`, 3, item.note),
         cell(`F${rowNumber}`, 11, ""),
         cell(`G${rowNumber}`, 11, ""),
       ], { height: rowHeightForTextValues(item.description, item.note) }));

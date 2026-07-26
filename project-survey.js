@@ -1080,16 +1080,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return Math.min(max, Math.max(min, Math.ceil(maxLength * 1.1 + 2)));
   }
 
+  function worksheetTightColumnWidth(values) {
+    const maxLength = values.reduce((width, value) => {
+      const textLength = String(value ?? "").trim().length;
+      return Math.max(width, textLength);
+    }, 0);
+
+    return maxLength ? maxLength + 1 : 8;
+  }
+
   function buildWorksheetXml(data) {
     const rows = [];
-    const locationColumnWidth = worksheetColumnWidth(
-      ["Detail Lokasi", ...data.pulls.map((pull) => pull.location)],
-      { min: 24, max: 42 }
-    );
-    const noteColumnWidth = worksheetColumnWidth(
-      ["Catatan", ...data.pulls.map((pull) => pull.note)],
-      { min: 24, max: 42 }
-    );
+    const locationColumnWidth = worksheetTightColumnWidth([
+      "Detail Lokasi",
+      ...data.pulls.map((pull) => pull.location),
+    ]);
+    const noteColumnWidth = worksheetTightColumnWidth([
+      "Catatan",
+      ...data.pulls.map((pull) => pull.note),
+    ]);
     const itemNoteColumnWidth = worksheetColumnWidth(
       [
         "Catatan",

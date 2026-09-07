@@ -1666,7 +1666,7 @@ document.addEventListener("DOMContentLoaded", () => {
     preparedRows.forEach((row) => {
       if (rowY + row.requiredHeight > pageBottom + fitTolerance) {
         doc.addPage();
-        rowY = drawPdfSectionHeader(doc, config, continuationTopY);
+        rowY = drawPdfSectionHeader(doc, config, continuationTopY, { showTitle: false });
       }
 
       // Only rows taller than a full page need to continue across pages.
@@ -1691,7 +1691,7 @@ document.addEventListener("DOMContentLoaded", () => {
         lineOffset += lineCount;
         if (lineOffset < row.lineCount) {
           doc.addPage();
-          rowY = drawPdfSectionHeader(doc, config, continuationTopY);
+          rowY = drawPdfSectionHeader(doc, config, continuationTopY, { showTitle: false });
         }
       }
     });
@@ -1699,18 +1699,20 @@ document.addEventListener("DOMContentLoaded", () => {
     return rowY;
   }
 
-  function drawPdfSectionHeader(doc, config, topY) {
+  function drawPdfSectionHeader(doc, config, topY, { showTitle = true } = {}) {
     const left = PDF_LAYOUT.table.left;
     const headerHeight = PDF_LAYOUT.table.headerHeight;
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10.12);
     doc.setTextColor(0, 0, 0);
-    doc.text(
-      config.title,
-      PDF_LAYOUT.sectionTitle.x,
-      topY - PDF_LAYOUT.sectionTitle.offsetY
-    );
+    if (showTitle) {
+      doc.text(
+        config.title,
+        PDF_LAYOUT.sectionTitle.x,
+        topY - PDF_LAYOUT.sectionTitle.offsetY
+      );
+    }
 
     doc.setFillColor(31, 78, 120);
     doc.rect(left, topY, config.width, headerHeight, "F");

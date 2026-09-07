@@ -1480,6 +1480,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const PDF_LAYOUT = {
+    page: { topMargin: 18.4, bottomMargin: 42, footerBottom: 18.4, footerFontSize: 9.2 },
     logo: { x: 18.4, y: 18.4, width: 132.14, height: 52.19 },
     title: { x: 297.6, y: 92, fontSize: 14.72 },
     metadata: { labelX: 21.16, valueX: 177.56, startY: 128.8, rowGap: 11.96, fontSize: 10.12 },
@@ -1555,8 +1556,26 @@ document.addEventListener("DOMContentLoaded", () => {
     nextY = drawItemPdfSection(doc, "C. MATERIAL", data.materials, nextY)
       + PDF_LAYOUT.table.sectionGap;
     drawItemPdfSection(doc, "D. PEKERJAAN TAMBAHAN", data.extras, nextY);
+    drawPdfPageNumbers(doc);
 
     return doc;
+  }
+
+  function drawPdfPageNumbers(doc) {
+    const pageCount = doc.getNumberOfPages();
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(PDF_LAYOUT.page.footerFontSize);
+    doc.setTextColor(100, 100, 100);
+
+    for (let page = 1; page <= pageCount; page += 1) {
+      doc.setPage(page);
+      doc.text(
+        `${page} of ${pageCount}`,
+        doc.internal.pageSize.getWidth() / 2,
+        doc.internal.pageSize.getHeight() - PDF_LAYOUT.page.footerBottom,
+        { align: "center" }
+      );
+    }
   }
 
   function drawMetadata(doc, data) {
@@ -1615,8 +1634,74 @@ document.addEventListener("DOMContentLoaded", () => {
   function drawPdfSection(doc, config) {
     const left = PDF_LAYOUT.table.left;
     const headerHeight = PDF_LAYOUT.table.headerHeight;
-    const defaultRowHeight = PDF_LAYOUT.table.rowHeight;
     const rows = config.rows.length ? config.rows : [{}];
+    const pageBottom = doc.internal.pageSize.getHeight() - PDF_LAYOUT.page.bottomMargin;
+    const continuationTopY = PDF_LAYOUT.page.topMargin + PDF_LAYOUT.sectionTitle.offsetY;
+    const fullPageRowHeight = pageBottom - continuationTopY - headerHeight;
+    const fitTolerance = 0.001;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10.12);
+    const preparedRows = rows.map((row) => {
+      const cells = config.columns.map((column) => (
+        column.wrap
+          ? wrapPdfText(doc, row[column.key] ?? "", getPdfTextMaxWidth(column))
+          : [fitText(doc, row[column.key] ?? "", getPdfTextMaxWidth(column))]
+      ));
+      const lineCount = Math.max(...cells.map((lines) => lines.length));
+      const height = getPdfWrappedRowHeight(lineCount);
+      const requiredHeight = height > fullPageRowHeight + fitTolerance
+        ? PDF_LAYOUT.table.rowHeight
+        : height;
+      return { cells, lineCount, requiredHeight };
+    });
+
+    let topY = config.topY;
+    if (topY + headerHeight + preparedRows[0].requiredHeight > pageBottom + fitTolerance) {
+      doc.addPage();
+      topY = continuationTopY;
+    }
+
+    let rowY = drawPdfSectionHeader(doc, config, topY);
+    preparedRows.forEach((row) => {
+      if (rowY + row.requiredHeight > pageBottom + fitTolerance) {
+        doc.addPage();
+        rowY = drawPdfSectionHeader(doc, config, continuationTopY);
+      }
+
+      // Only rows taller than a full page need to continue across pages.
+      let lineOffset = 0;
+      while (lineOffset < row.lineCount) {
+        const availableLines = Math.max(1, 1 + Math.floor(
+          (pageBottom - rowY - PDF_LAYOUT.table.rowHeight + fitTolerance)
+            / PDF_LAYOUT.table.bodyLineHeight
+        ));
+        const lineCount = Math.min(row.lineCount - lineOffset, availableLines);
+        const rowHeight = getPdfWrappedRowHeight(lineCount);
+        drawGrid(doc, left, rowY, config.width, rowHeight, config.columns);
+
+        let cellX = left;
+        config.columns.forEach((column, index) => {
+          const lines = row.cells[index].slice(lineOffset, lineOffset + lineCount);
+          drawPdfCellText(doc, lines, column, cellX, rowY, rowHeight);
+          cellX += column.width;
+        });
+
+        rowY += rowHeight;
+        lineOffset += lineCount;
+        if (lineOffset < row.lineCount) {
+          doc.addPage();
+          rowY = drawPdfSectionHeader(doc, config, continuationTopY);
+        }
+      }
+    });
+
+    return rowY;
+  }
+
+  function drawPdfSectionHeader(doc, config, topY) {
+    const left = PDF_LAYOUT.table.left;
+    const headerHeight = PDF_LAYOUT.table.headerHeight;
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10.12);
@@ -1624,12 +1709,12 @@ document.addEventListener("DOMContentLoaded", () => {
     doc.text(
       config.title,
       PDF_LAYOUT.sectionTitle.x,
-      config.topY - PDF_LAYOUT.sectionTitle.offsetY
+      topY - PDF_LAYOUT.sectionTitle.offsetY
     );
 
     doc.setFillColor(31, 78, 120);
-    doc.rect(left, config.topY, config.width, headerHeight, "F");
-    drawGrid(doc, left, config.topY, config.width, headerHeight, config.columns);
+    doc.rect(left, topY, config.width, headerHeight, "F");
+    drawGrid(doc, left, topY, config.width, headerHeight, config.columns);
 
     let x = left;
     doc.setFontSize(10.12);
@@ -1638,43 +1723,16 @@ document.addEventListener("DOMContentLoaded", () => {
       doc.text(
         column.label,
         x + column.width / 2,
-        config.topY + (headerHeight / 2),
+        topY + (headerHeight / 2),
         { align: "center", baseline: "middle" }
       );
       x += column.width;
     });
 
-    let rowY = config.topY + headerHeight;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10.12);
     doc.setTextColor(0, 0, 0);
-
-    rows.forEach((row) => {
-      const rowHeight = getPdfRowHeight(doc, row, config.columns, defaultRowHeight);
-      drawGrid(doc, left, rowY, config.width, rowHeight, config.columns);
-
-      let cellX = left;
-      config.columns.forEach((column) => {
-        drawPdfCellText(doc, row[column.key] ?? "", column, cellX, rowY, rowHeight);
-        cellX += column.width;
-      });
-
-      rowY += rowHeight;
-    });
-
-    doc.setTextColor(0, 0, 0);
-    return rowY;
-  }
-
-  function getPdfRowHeight(doc, row, columns, defaultRowHeight) {
-    return columns.reduce((height, column) => {
-      if (!column.wrap) {
-        return height;
-      }
-
-      const lines = wrapPdfText(doc, row[column.key] ?? "", getPdfTextMaxWidth(column));
-      return Math.max(height, getPdfWrappedRowHeight(lines.length));
-    }, defaultRowHeight);
+    return topY + headerHeight;
   }
 
   function getPdfWrappedRowHeight(lineCount) {
@@ -1687,14 +1745,11 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  function drawPdfCellText(doc, value, column, cellX, rowY, rowHeight) {
+  function drawPdfCellText(doc, lines, column, cellX, rowY, rowHeight) {
     const align = column.align === "left" ? "left" : "center";
     const textX = align === "left"
       ? cellX + PDF_LAYOUT.table.cellPaddingX
       : cellX + column.width / 2;
-    const lines = column.wrap
-      ? wrapPdfText(doc, value, getPdfTextMaxWidth(column))
-      : [fitText(doc, value, getPdfTextMaxWidth(column))];
     const firstLineY = getPdfCenteredLineY(rowY, rowHeight, lines.length, 0);
 
     lines.forEach((line, lineIndex) => {

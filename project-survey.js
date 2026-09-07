@@ -1571,9 +1571,9 @@ document.addEventListener("DOMContentLoaded", () => {
       doc.setPage(page);
       doc.text(
         `${page} of ${pageCount}`,
-        doc.internal.pageSize.getWidth() / 2,
+        PDF_LAYOUT.table.left + PDF_LAYOUT.fullTableWidth,
         doc.internal.pageSize.getHeight() - PDF_LAYOUT.page.footerBottom,
-        { align: "center" }
+        { align: "right" }
       );
     }
   }

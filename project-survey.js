@@ -1565,14 +1565,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const pageCount = doc.getNumberOfPages();
     doc.setFont("helvetica", "normal");
     doc.setFontSize(PDF_LAYOUT.page.footerFontSize);
-    doc.setTextColor(100, 100, 100);
+    doc.setTextColor(140, 140, 140);
 
     for (let page = 1; page <= pageCount; page += 1) {
       doc.setPage(page);
+      const footerY = doc.internal.pageSize.getHeight() - PDF_LAYOUT.page.footerBottom;
+      doc.text(
+        "Project Survey Form",
+        PDF_LAYOUT.table.left,
+        footerY,
+        { align: "left" }
+      );
       doc.text(
         `Page ${page} of ${pageCount}`,
         PDF_LAYOUT.table.left + PDF_LAYOUT.fullTableWidth,
-        doc.internal.pageSize.getHeight() - PDF_LAYOUT.page.footerBottom,
+        footerY,
         { align: "right" }
       );
     }

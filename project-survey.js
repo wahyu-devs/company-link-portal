@@ -1570,7 +1570,7 @@ document.addEventListener("DOMContentLoaded", () => {
     for (let page = 1; page <= pageCount; page += 1) {
       doc.setPage(page);
       doc.text(
-        `${page} of ${pageCount}`,
+        `Page ${page} of ${pageCount}`,
         PDF_LAYOUT.table.left + PDF_LAYOUT.fullTableWidth,
         doc.internal.pageSize.getHeight() - PDF_LAYOUT.page.footerBottom,
         { align: "right" }

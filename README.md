@@ -63,7 +63,7 @@ browser-based setup does not use a client secret.
 
 ## Load a Survey from Excel
 
-In Project Survey Form, select **Load**, then **Load from Excel** in Saved Forms.
+In Project Survey Form, select **Load**, then **Load from Excel** in Load Documents.
 Choose an `.xlsx` downloaded from this app. The file is read locally in the
 browser and loaded as an editable draft. Click **Save** to store it in Saved
 Forms and enable Download or Submit. Saving the same customer and project

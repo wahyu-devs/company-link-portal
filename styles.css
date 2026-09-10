@@ -1075,7 +1075,7 @@ body.survey-page {
 
 .survey-modal-panel {
   position: relative;
-  width: min(100%, 560px);
+  width: min(100%, 800px);
   max-height: min(78vh, 620px);
   padding: 16px;
   overflow: auto;
@@ -1214,13 +1214,12 @@ body.survey-page {
 }
 
 .survey-saved-text h3 {
-  overflow: hidden;
   color: var(--text);
   font-size: 14px;
   line-height: 1.35;
   font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .survey-saved-text p,

@@ -61,6 +61,29 @@ draft, prompts Google login when needed, and sends the generated Excel/PDF files
 as Gmail attachments. This
 browser-based setup does not use a client secret.
 
+## Load a Survey from Excel
+
+In Project Survey Form, select **Load**, then **Load from Excel** in Saved Forms.
+Choose an `.xlsx` downloaded from this app. The file is read locally in the
+browser and loaded as an editable draft. Click **Save** to store it in Saved
+Forms and enable Download or Submit. Saving the same customer and project
+updates the existing saved form.
+
+The importer checks the `Survey` sheet, metadata, section headers, quantities,
+and dropdown values before replacing the current form. Unsaved changes require
+confirmation. Notes are optional, including older exports without a Notes column.
+Files with formulas, error cells, or an incompatible structure are rejected.
+Limits: 20 MB per file, 20,000 worksheet rows, and 32 worksheet columns.
+
+SheetJS CE 0.20.3 is vendored in `assets/vendor/sheetjs/` and loaded only when
+reading an Excel file. No Google login or file upload is involved.
+
+Run the import regression tests with Node.js:
+
+```sh
+node --test tests/project-survey-import.test.cjs
+```
+
 ## Project Structure
 
 ```text

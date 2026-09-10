@@ -1113,6 +1113,30 @@ body.survey-page {
   flex: 0 0 auto;
 }
 
+.survey-saved-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.survey-saved-tools .survey-saved-search {
+  flex: 1 1 200px;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.survey-saved-tools .survey-import-action {
+  flex: 1 0 auto;
+  min-height: 42px;
+}
+
+.survey-import-action:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 .survey-saved-search {
   position: relative;
   display: block;

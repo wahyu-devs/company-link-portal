@@ -35,6 +35,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script defer src="https://accounts.google.com/gsi/client"></script>
   <script defer src="project-survey.config.js"></script>
+  <script defer src="project-survey-import.js"></script>
   <script defer src="project-survey.js"></script>
   <!-- Vercel Web Analytics -->
   <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
@@ -209,12 +210,19 @@
               <i class="bi bi-x-lg" aria-hidden="true"></i>
             </button>
           </div>
-          <label class="survey-saved-search" for="savedSurveySearch">
-            <span class="survey-saved-search-icon">
-              <i class="bi bi-search" aria-hidden="true"></i>
-            </span>
-            <input id="savedSurveySearch" type="search" autocomplete="off" placeholder="Search saved form" />
-          </label>
+          <div class="survey-saved-tools">
+            <label class="survey-saved-search" for="savedSurveySearch">
+              <span class="survey-saved-search-icon">
+                <i class="bi bi-search" aria-hidden="true"></i>
+              </span>
+              <input id="savedSurveySearch" type="search" autocomplete="off" placeholder="Search saved form" />
+            </label>
+            <button class="survey-list-action survey-import-action" type="button" id="importSurveyExcel">
+              <i class="bi bi-file-earmark-excel" aria-hidden="true"></i>
+              <span>Load from Excel</span>
+            </button>
+            <input type="file" id="surveyExcelFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+          </div>
           <div class="survey-saved-list" id="savedSurveyList"></div>
         </section>
       </div>

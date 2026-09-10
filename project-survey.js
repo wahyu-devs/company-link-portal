@@ -126,12 +126,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedSurveyClose = document.getElementById("savedSurveyClose");
   const savedSurveySearch = document.getElementById("savedSurveySearch");
   const savedSurveyList = document.getElementById("savedSurveyList");
+  const importSurveyExcelButton = document.getElementById("importSurveyExcel");
+  const surveyExcelFile = document.getElementById("surveyExcelFile");
   const pageLoader = document.getElementById("pageLoader");
   const LOADER_MIN_DURATION = 2000;
   const loaderStartedAt = performance.now();
   let toastTimeoutId;
   let savedSurveySnapshot = "";
   let isSubmittingSurvey = false;
+  let isImportingSurvey = false;
   let googleTokenClient;
 
   function itemColumns() {
@@ -574,6 +577,55 @@ document.addEventListener("DOMContentLoaded", () => {
     closeSavedSurveyModal();
     scrollSurveyToTop();
     setStatus("Dokumen baru siap diisi.", "success");
+  }
+
+  async function importSurveyExcel() {
+    const file = surveyExcelFile.files?.[0];
+    if (!file || isImportingSurvey) return;
+    isImportingSurvey = true;
+    importSurveyExcelButton.disabled = true;
+    importSurveyExcelButton.setAttribute("aria-busy", "true");
+    setStatus("Membaca file Excel...", "info");
+
+    try {
+      if (!globalThis.ProjectSurveyExcel?.readFile) {
+        throw new Error("Pembaca Excel belum tersedia. Muat ulang halaman dan coba lagi.");
+      }
+      const imported = await globalThis.ProjectSurveyExcel.readFile(file);
+      Object.entries(sectionConfig).forEach(([key, config]) => {
+        imported[key].forEach((row, rowIndex) => {
+          config.columns.filter((column) => column.input === "select").forEach((column) => {
+            if (isBlankValue(row[column.key])) return;
+            const options = column.optionsForRow ? column.optionsForRow(row) : column.options;
+            const match = options.find((option) => option.toLowerCase() === row[column.key].toLowerCase());
+            if (!match) throw new Error(`${column.label} pada item ${rowIndex + 1} tidak sesuai pilihan form.`);
+            row[column.key] = match;
+          });
+        });
+      });
+      const nextState = normalizeSurvey(imported);
+      const current = collectFormData();
+      const baseline = savedSurveySnapshot || serializeSurvey(createEmptySurvey());
+      if (serializeSurvey(current) !== baseline
+        && !globalThis.confirm("Perubahan form belum disimpan. Ganti dengan data dari file Excel?")) {
+        setStatus("Load dari Excel dibatalkan.", "info");
+        return;
+      }
+
+      state = nextState;
+      savedSurveySnapshot = "";
+      initializeForm();
+      closeSavedSurveyModal();
+      scrollSurveyToTop();
+      setStatus("Excel berhasil dimuat. Klik Save untuk menyimpan form.", "success");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "File Excel belum bisa dimuat.", "danger");
+    } finally {
+      surveyExcelFile.value = "";
+      isImportingSurvey = false;
+      importSurveyExcelButton.disabled = false;
+      importSurveyExcelButton.removeAttribute("aria-busy");
+    }
   }
 
   function scrollSurveyToTop({ smooth = true } = {}) {
@@ -2324,6 +2376,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("submitSurvey").addEventListener("click", submitSurvey);
   document.getElementById("loadSurvey").addEventListener("click", loadSurvey);
   document.getElementById("resetSurvey").addEventListener("click", resetSurvey);
+  importSurveyExcelButton.addEventListener("click", () => surveyExcelFile.click());
+  surveyExcelFile.addEventListener("change", importSurveyExcel);
   savedSurveyList.addEventListener("click", (event) => {
     const actionButton = event.target instanceof Element
       ? event.target.closest("[data-load-saved], [data-delete-saved]")

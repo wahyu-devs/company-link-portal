@@ -128,6 +128,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedSurveyList = document.getElementById("savedSurveyList");
   const importSurveyExcelButton = document.getElementById("importSurveyExcel");
   const surveyExcelFile = document.getElementById("surveyExcelFile");
+  const unsavedSurveyModal = document.getElementById("unsavedSurveyModal");
+  const unsavedSurveyCancel = document.getElementById("unsavedSurveyCancel");
+  const surveyHomeButton = document.querySelector(".survey-home-button");
   const pageLoader = document.getElementById("pageLoader");
   const LOADER_MIN_DURATION = 1000;
   const loaderStartedAt = performance.now();
@@ -136,6 +139,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let isSubmittingSurvey = false;
   let isImportingSurvey = false;
   let googleTokenClient;
+  let pendingUnsavedChoice = null;
+  let beforeUnloadAttached = false;
+  let skipNextUnloadWarning = false;
 
   function itemColumns() {
     return [
@@ -182,6 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("customerPic").value = state.customerPic ?? "";
     document.getElementById("projectName").value = state.projectName ?? "";
     renderAllSections();
+    updateUnsavedProtection();
   }
 
   function renderAllSections() {
@@ -325,6 +332,7 @@ document.addEventListener("DOMContentLoaded", () => {
     syncStateFromForm();
     state[sectionKey].push(emptyRow(sectionConfig[sectionKey].columns));
     renderSection(sectionKey);
+    updateUnsavedProtection();
 
     if (focusNewRow) {
       focusSectionRow(sectionKey, state[sectionKey].length - 1);
@@ -438,6 +446,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function syncStateFromForm(options) {
     state = collectFormData(options);
+    updateUnsavedProtection(state);
     return state;
   }
 
@@ -465,10 +474,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function saveSurvey() {
     const data = syncStateFromForm({ format: true });
     if (!validateSurvey(data)) {
-      return;
+      return false;
     }
 
-    saveSurveyLocally(data);
+    return saveSurveyLocally(data);
   }
 
   function saveSurveyLocally(data) {
@@ -570,7 +579,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function resetSurvey() {
+  async function resetSurvey() {
+    if (!await confirmUnsavedChanges()) return;
     state = createEmptySurvey();
     savedSurveySnapshot = "";
     initializeForm();
@@ -604,11 +614,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       });
       const nextState = normalizeSurvey(imported);
-      const current = collectFormData();
-      const baseline = savedSurveySnapshot || serializeSurvey(createEmptySurvey());
-      if (serializeSurvey(current) !== baseline
-        && !globalThis.confirm("Perubahan form belum disimpan. Ganti dengan data dari file Excel?")) {
-        setStatus("Load dari Excel dibatalkan.", "info");
+      setStatus("");
+      if (!await confirmUnsavedChanges()) {
         return;
       }
 
@@ -834,7 +841,9 @@ document.addEventListener("DOMContentLoaded", () => {
     savedSurveyList.replaceChildren(fragment);
   }
 
-  function loadSavedSurvey(draftId) {
+  async function loadSavedSurvey(draftId) {
+    if (!await confirmUnsavedChanges()) return;
+    // Saving in the confirmation can update the very document being loaded.
     const savedSurveys = readSavedSurveys();
     const draft = savedSurveys.find((item) => item.id === draftId);
 
@@ -846,7 +855,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     state = normalizeSurvey(draft.data);
     initializeForm();
-    markSurveySaved(state);
+    markSurveySaved(collectFormData());
     closeSavedSurveyModal();
     scrollSurveyToTop();
     setStatus(`${savedSurveyTitle(draft)} berhasil dimuat.`, "success");
@@ -904,6 +913,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function validateSurvey(data) {
+    const invalidNumber = Array.from(surveyForm.querySelectorAll('input[type="number"]'))
+      .find((input) => input.validity.badInput);
+    if (invalidNumber) {
+      setStatus("Masukkan angka yang valid sebelum menyimpan form.", "warning");
+      invalidNumber.focus();
+      return false;
+    }
+
     const requiredFields = [
       ["surveyDate", "Tanggal Survey"],
       ["surveyorName", "Nama Surveyor"],
@@ -985,6 +1002,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function markSurveySaved(data) {
     savedSurveySnapshot = serializeSurvey(data);
+    updateUnsavedProtection();
   }
 
   function isSurveySaved(data) {
@@ -993,6 +1011,69 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function serializeSurvey(data) {
     return JSON.stringify(data);
+  }
+
+  function hasUnsavedChanges(data = collectFormData()) {
+    const baseline = savedSurveySnapshot || serializeSurvey(createEmptySurvey());
+    return serializeSurvey(data) !== baseline
+      || Array.from(surveyForm.querySelectorAll('input[type="number"]')).some((input) => input.validity.badInput);
+  }
+
+  function warnBeforeUnload(event) {
+    if (skipNextUnloadWarning) {
+      skipNextUnloadWarning = false;
+      return;
+    }
+    if (!hasUnsavedChanges()) return;
+    event.preventDefault();
+    event.returnValue = true;
+  }
+
+  function updateUnsavedProtection(data) {
+    const needsProtection = hasUnsavedChanges(data);
+    if (needsProtection && !beforeUnloadAttached) {
+      globalThis.addEventListener("beforeunload", warnBeforeUnload);
+      beforeUnloadAttached = true;
+    } else if (!needsProtection && beforeUnloadAttached) {
+      globalThis.removeEventListener("beforeunload", warnBeforeUnload);
+      beforeUnloadAttached = false;
+    }
+  }
+
+  function confirmUnsavedChanges() {
+    if (pendingUnsavedChoice) return Promise.resolve(false);
+    if (!hasUnsavedChanges()) return Promise.resolve(true);
+
+    return new Promise((resolve) => {
+      const previousFocus = document.activeElement;
+      const background = Array.from(unsavedSurveyModal.parentElement.children)
+        .filter((element) => element !== unsavedSurveyModal && element !== surveyToast && !element.inert);
+      pendingUnsavedChoice = { resolve, previousFocus, background };
+      background.forEach((element) => { element.inert = true; });
+      unsavedSurveyModal.hidden = false;
+      unsavedSurveyCancel.focus();
+    });
+  }
+
+  function finishUnsavedChoice(choice) {
+    if (!pendingUnsavedChoice) return;
+    const { resolve, previousFocus, background } = pendingUnsavedChoice;
+    pendingUnsavedChoice = null;
+    unsavedSurveyModal.hidden = true;
+    background.forEach((element) => { element.inert = false; });
+
+    if (choice === "save") {
+      closeSavedSurveyModal();
+      document.getElementById("saveSurvey").focus();
+      resolve(saveSurvey());
+      return;
+    }
+
+    if (previousFocus?.isConnected && !previousFocus.disabled && !previousFocus.closest("[hidden]")) {
+      previousFocus.focus();
+    } else if (!savedSurveyModal.hidden) savedSurveyClose.focus();
+    else document.getElementById("saveSurvey").focus();
+    resolve(choice === "discard");
   }
 
   function openSavedSurveyModal() {
@@ -2300,6 +2381,7 @@ document.addEventListener("DOMContentLoaded", () => {
     normalizeTextInputRealtime(event.target);
     syncStateFromForm();
   });
+  surveyForm.addEventListener("change", () => syncStateFromForm());
 
   sectionConfig.pulls.target.addEventListener("change", (event) => {
     const target = event.target instanceof Element
@@ -2320,6 +2402,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     normalizePullCable(state.pulls[rowIndex]);
     renderSection("pulls");
+    updateUnsavedProtection();
   });
 
   document.querySelectorAll("[data-add-row]").forEach((button) => {
@@ -2369,6 +2452,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       renderSection(sectionKey);
+      updateUnsavedProtection();
     });
   });
 
@@ -2378,6 +2462,17 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("resetSurvey").addEventListener("click", resetSurvey);
   importSurveyExcelButton.addEventListener("click", () => surveyExcelFile.click());
   surveyExcelFile.addEventListener("change", importSurveyExcel);
+  surveyHomeButton.addEventListener("click", async (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    if (!await confirmUnsavedChanges()) return;
+    skipNextUnloadWarning = true;
+    globalThis.location.assign(surveyHomeButton.href);
+  });
+  unsavedSurveyModal.addEventListener("click", (event) => {
+    const button = event.target instanceof Element ? event.target.closest("[data-unsaved-choice]") : null;
+    if (button) finishUnsavedChoice(button.dataset.unsavedChoice);
+  });
   savedSurveyList.addEventListener("click", (event) => {
     const actionButton = event.target instanceof Element
       ? event.target.closest("[data-load-saved], [data-delete-saved]")
@@ -2412,6 +2507,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
   document.addEventListener("keydown", (event) => {
+    if (!unsavedSurveyModal.hidden) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        finishUnsavedChoice("cancel");
+      } else if (event.key === "Tab") {
+        const buttons = Array.from(unsavedSurveyModal.querySelectorAll('button:not([tabindex="-1"]):not([disabled])'));
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+      return;
+    }
     if (event.key === "Escape" && !savedSurveyModal.hidden) {
       closeSavedSurveyModal();
     }
@@ -2472,6 +2585,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   globalThis.addEventListener("pageshow", () => {
+    skipNextUnloadWarning = false;
+    updateUnsavedProtection();
     scrollSurveyToTop({ smooth: false });
   });
 });

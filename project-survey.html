@@ -227,6 +227,32 @@
         </section>
       </div>
 
+      <div class="survey-modal survey-unsaved-modal" id="unsavedSurveyModal" role="alertdialog" aria-modal="true"
+        aria-labelledby="unsavedSurveyTitle" aria-describedby="unsavedSurveyMessage" hidden>
+        <button class="survey-modal-backdrop" type="button" data-unsaved-choice="cancel" tabindex="-1"
+          aria-label="Cancel"></button>
+        <section class="survey-saved-panel survey-modal-panel survey-unsaved-panel">
+          <div class="survey-saved-header">
+            <h2 id="unsavedSurveyTitle">Unsaved Changes</h2>
+            <button class="survey-modal-close" type="button" data-unsaved-choice="cancel" aria-label="Cancel">
+              <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+          </div>
+          <p id="unsavedSurveyMessage">Do you want to save your changes before continuing?</p>
+          <div class="survey-unsaved-actions">
+            <button class="survey-list-action" type="button" data-unsaved-choice="cancel" id="unsavedSurveyCancel">
+              <i class="bi bi-x-lg" aria-hidden="true"></i><span>Cancel</span>
+            </button>
+            <button class="survey-list-action survey-list-action-danger" type="button" data-unsaved-choice="discard">
+              <i class="bi bi-trash" aria-hidden="true"></i><span>Discard Changes</span>
+            </button>
+            <button class="survey-list-action" type="button" data-unsaved-choice="save">
+              <i class="bi bi-floppy" aria-hidden="true"></i><span>Save &amp; Continue</span>
+            </button>
+          </div>
+        </section>
+      </div>
+
       <div id="surveyToast" class="survey-toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 
       <footer class="footer">

@@ -1082,6 +1082,33 @@ body.survey-page {
   box-shadow: var(--shadow-soft);
 }
 
+.survey-unsaved-modal {
+  z-index: 9100;
+}
+
+.survey-unsaved-modal .survey-unsaved-panel {
+  width: min(100%, 560px);
+}
+
+.survey-unsaved-panel > p {
+  margin: 0 0 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.survey-unsaved-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.survey-unsaved-actions .survey-list-action {
+  flex: 1 1 auto;
+  min-height: 42px;
+}
+
 .survey-saved-header {
   margin-bottom: 12px;
   display: flex;

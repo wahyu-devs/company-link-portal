@@ -84,6 +84,29 @@ Run the import regression tests with Node.js:
 node --test tests/project-survey-import.test.cjs
 ```
 
+## Unsaved Document Protection
+
+Project Survey Form prompts before **New**, loading a saved document, importing
+Excel, or **Back to Home** replaces unsaved work. Choose **Save & Continue**,
+**Discard Changes**, or **Cancel**. Failed validation or browser storage writes
+stop the pending action. Imported Excel documents still require an explicit Save.
+Opening or searching Load Documents does not replace the current form.
+
+Refresh, tab close, and browser navigation use the browser's standard warning
+only while changes are unsaved. Returning fields to their saved values removes
+the warning. Browsers control this dialog and may not show it during forced
+shutdowns, especially on mobile. This protection does not auto-save or recover drafts.
+
+Functional browser checks require Playwright and its Chromium browser available
+to Node.js (or `CHROME_EXECUTABLE` pointing to a local Chrome installation):
+
+```sh
+node tests/project-survey-unsaved.browser.cjs
+```
+
+The checks start and stop a temporary local server, block external services,
+and do not take screenshots.
+
 ## Project Structure
 
 ```text

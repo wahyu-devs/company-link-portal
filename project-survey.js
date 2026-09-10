@@ -129,8 +129,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const importSurveyExcelButton = document.getElementById("importSurveyExcel");
   const surveyExcelFile = document.getElementById("surveyExcelFile");
   const pageLoader = document.getElementById("pageLoader");
-  const LOADER_MIN_DURATION = 2000;
-  const loaderStartedAt = performance.now();
   let toastTimeoutId;
   let savedSurveySnapshot = "";
   let isSubmittingSurvey = false;
@@ -1061,13 +1059,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function hidePageLoader() {
-    const elapsed = performance.now() - loaderStartedAt;
-    const remainingDelay = Math.max(0, LOADER_MIN_DURATION - elapsed);
-
-    setTimeout(() => {
-      pageLoader?.classList.add("is-hidden");
-      pageLoader?.addEventListener("transitionend", () => pageLoader.remove(), { once: true });
-    }, remainingDelay);
+    pageLoader?.classList.add("is-hidden");
+    pageLoader?.addEventListener("transitionend", () => pageLoader.remove(), { once: true });
   }
 
   function escapeXml(value) {

@@ -1464,6 +1464,10 @@ body.survey-page {
     border-radius: var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-sm);
   }
 
+  .survey-saved-tools .survey-import-action {
+    width: 100%;
+  }
+
   .survey-toast {
     top: 12px;
     width: min(calc(100vw - 24px), 380px);

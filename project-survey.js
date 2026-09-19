@@ -1252,7 +1252,8 @@ document.addEventListener("DOMContentLoaded", () => {
       return Math.max(width, textLength);
     }, 0);
 
-    return maxLength ? maxLength + 1 : 8;
+    // Excel column widths cannot exceed 255 characters.
+    return maxLength ? Math.min(255, maxLength + 1) : 8;
   }
 
   function buildWorksheetXml(data) {
@@ -1265,6 +1266,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const noteColumnWidth = worksheetTightColumnWidth([
       "Catatan",
       ...data.pulls.map((pull) => pull.note),
+      ...data.activeDevices.map((item) => item.note),
+      ...data.materials.map((item) => item.note),
+      ...data.extras.map((item) => item.note),
     ]);
     const itemNoteColumnWidth = 16;
     let rowNumber = 6;

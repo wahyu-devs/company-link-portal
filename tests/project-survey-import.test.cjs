@@ -65,6 +65,24 @@ test("Excel item and remark columns use the requested spans", async () => {
   assert(merges.includes(`B${remarkDataRow + 1}:G${remarkDataRow + 1}`));
 });
 
+test("Excel item note width follows the longest note content", async () => {
+  const columnGWidth = async (data) => {
+    const workbook = XLSX.read(await (await exportFile(data)).arrayBuffer(), {
+      type: "array",
+      cellStyles: true,
+    });
+    return workbook.Sheets.Survey["!cols"][6].width;
+  };
+  const shortNotes = fixture();
+  const longNotes = fixture();
+  longNotes.materials[0].note = "x".repeat(300);
+  const shortWidth = await columnGWidth(shortNotes);
+  const longWidth = await columnGWidth(longNotes);
+
+  assert(longWidth > shortWidth);
+  assert.equal(longWidth, 255);
+});
+
 test("PDF item and remark columns match the Excel column spans", () => {
   const pullWidths = pdfLayout.pullColumns.map((column) => column.width);
   const sumWidths = (widths) => Number(widths.reduce((total, width) => total + width, 0).toFixed(2));

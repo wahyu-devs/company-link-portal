@@ -16,8 +16,9 @@ const exportCode = source.slice(source.indexOf("  function escapeXml("), source.
   + source.slice(source.indexOf("  function base64ToUint8Array("), source.indexOf("  const PDF_LAYOUT ="))
   + source.slice(source.indexOf("  function formatSurveyDate("), source.indexOf("  function buildFileName("));
 vm.runInContext(exportCode, context);
-const pdfLayoutCode = source.slice(source.indexOf("  const PDF_LAYOUT ="), source.indexOf("  function drawPdf("))
-  + "\nglobalThis.projectSurveyPdfLayout = PDF_LAYOUT;";
+const pdfLayoutCode = source.slice(source.indexOf("  const PDF_LAYOUT ="), source.indexOf("  function formatSurveyDate("))
+  + "\nglobalThis.projectSurveyPdfLayout = PDF_LAYOUT;"
+  + "\nglobalThis.projectSurveyDrawDocumentationPdfSection = drawDocumentationPdfSection;";
 vm.runInContext(pdfLayoutCode, context);
 
 function fixture() {
@@ -28,6 +29,7 @@ function fixture() {
     pulls: [{ type: "Data", qty: 0, unit: "mtr", cable: "UTP", location: "Room 1", note: "Panel East" }],
     activeDevices: [item("Switch")], materials: [item("RJ45")], extras: [item("Installation")],
     remarks: [{ description: "Coordinate access with the site team" }],
+    documentation: [{ photo: `data:image/png;base64,${logo}`, description: "Rack front view" }],
   };
 }
 
@@ -41,4 +43,5 @@ module.exports = {
   fixture,
   exportFile,
   pdfLayout: JSON.parse(JSON.stringify(context.projectSurveyPdfLayout)),
+  drawDocumentationPdfSection: context.projectSurveyDrawDocumentationPdfSection,
 };

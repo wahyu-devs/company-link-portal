@@ -3,7 +3,13 @@ const { test } = require("node:test");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const { root, fixture, exportFile, pdfLayout } = require("./helpers/survey-fixtures.cjs");
+const {
+  root,
+  fixture,
+  exportFile,
+  pdfLayout,
+  drawDocumentationPdfSection,
+} = require("./helpers/survey-fixtures.cjs");
 const XLSX = require("../assets/vendor/sheetjs/xlsx-0.20.3.mini.min.js");
 const context = vm.createContext({ XLSX, Date });
 vm.runInContext(fs.readFileSync(path.join(root, "project-survey-import.js"), "utf8"), context);
@@ -32,9 +38,9 @@ test("many rows, decimals, literal formula-like text and long notes survive impo
 
 test("empty sections are restored as an empty editable row", async () => {
   const data = fixture();
-  for (const key of ["pulls", "activeDevices", "materials", "extras", "remarks"]) data[key] = [];
+  for (const key of ["pulls", "activeDevices", "materials", "extras", "remarks", "documentation"]) data[key] = [];
   const parsed = await read(await exportFile(data));
-  for (const key of ["pulls", "activeDevices", "materials", "extras", "remarks"]) {
+  for (const key of ["pulls", "activeDevices", "materials", "extras", "remarks", "documentation"]) {
     assert.equal(parsed[key].length, 1);
     assert(Object.values(parsed[key][0]).every((value) => value === ""));
   }
@@ -63,6 +69,36 @@ test("Excel item and remark columns use the requested spans", async () => {
   assert.deepEqual(rows[remarkHeaderRow].slice(0, 7), ["No", "Catatan", "", "", "", "", ""]);
   assert(merges.includes(`B${remarkHeaderRow + 1}:G${remarkHeaderRow + 1}`));
   assert(merges.includes(`B${remarkDataRow + 1}:G${remarkDataRow + 1}`));
+
+  const documentationSectionIndex = rows.findIndex((row) => row[0] === "F. DOKUMENTASI");
+  const documentationHeaderRow = documentationSectionIndex + 2;
+  const documentationDataRow = documentationSectionIndex + 3;
+  assert.deepEqual(rows[documentationHeaderRow].slice(0, 7), ["No", "Foto", "", "", "", "Deskripsi", ""]);
+  for (const row of [documentationHeaderRow, documentationDataRow]) {
+    assert(merges.includes(`B${row + 1}:E${row + 1}`));
+    assert(merges.includes(`F${row + 1}:G${row + 1}`));
+  }
+});
+
+test("Excel embeds documentation photos and keeps their source data on a hidden sheet", async () => {
+  const file = await exportFile();
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const workbook = XLSX.read(buffer, { type: "buffer" });
+  const binaryText = buffer.toString("latin1");
+
+  assert(workbook.SheetNames.includes("DocumentationData"));
+  assert.equal(workbook.Workbook.Sheets.find((sheet) => sheet.name === "DocumentationData").Hidden, 1);
+  assert(binaryText.includes("xl/media/image2.png"));
+  assert(binaryText.includes('name="Documentation 1"'));
+  assert(binaryText.includes('<xdr:col>1</xdr:col>'));
+  assert(binaryText.includes('<xdr:col>5</xdr:col>'));
+});
+
+test("documentation photos stay matched when earlier rows are blank", async () => {
+  const data = fixture();
+  data.documentation.unshift({ photo: "", description: "" });
+  const parsed = await read(await exportFile(data));
+  assert.deepEqual(parsed.documentation, data.documentation.slice(1));
 });
 
 test("Excel item note width follows the longest note content", async () => {
@@ -84,7 +120,7 @@ test("Excel item note width follows the longest note content", async () => {
   assert.equal(longWidth, longNotes.materials[0].note.length + 1);
 });
 
-test("PDF item and remark columns match the Excel column spans", () => {
+test("PDF item, remark and documentation columns match the Excel column spans", () => {
   const pullWidths = pdfLayout.pullColumns.map((column) => column.width);
   const sumWidths = (widths) => Number(widths.reduce((total, width) => total + width, 0).toFixed(2));
   const remarkWidth = sumWidths(pdfLayout.remarkColumns.map((column) => column.width));
@@ -101,17 +137,67 @@ test("PDF item and remark columns match the Excel column spans", () => {
   assert.equal(remarkWidth, pdfLayout.itemTableWidth);
   assert.equal(pdfLayout.remarkColumns[1].label, "Catatan");
   assert.equal(pdfLayout.remarkColumns[1].width, sumWidths(pullWidths.slice(1)));
+  assert.deepEqual(pdfLayout.documentationColumns.map((column) => column.width), [
+    pullWidths[0],
+    sumWidths(pullWidths.slice(1, 5)),
+    sumWidths(pullWidths.slice(5, 7)),
+  ]);
+  assert.equal(pdfLayout.documentationColumns[1].label, "Foto");
+  assert.equal(pdfLayout.documentationColumns[2].label, "Deskripsi");
 });
 
-test("older exports without the remarks section remain importable", async () => {
+test("PDF documentation section renders its photo inside the photo column", () => {
+  const images = [];
+  const doc = {
+    internal: { pageSize: { getHeight: () => 841.68 } },
+    setFont() {}, setFontSize() {}, setTextColor() {}, setFillColor() {}, setDrawColor() {}, setLineWidth() {},
+    rect() {}, line() {}, text() {}, addPage() {},
+    getTextWidth: (value) => String(value).length * 5,
+    splitTextToSize: (value) => [String(value)],
+    getImageProperties: () => ({ width: 400, height: 158 }),
+    addImage: (...args) => images.push(args),
+  };
+
+  drawDocumentationPdfSection(doc, fixture().documentation, 100);
+  assert.equal(images.length, 1);
+  assert.equal(images[0][1], "PNG");
+  assert(images[0][2] >= pdfLayout.table.left + pdfLayout.documentationColumns[0].width);
+  assert(images[0][2] + images[0][4]
+    <= pdfLayout.table.left + pdfLayout.documentationColumns[0].width + pdfLayout.documentationColumns[1].width);
+});
+
+test("older exports without the remarks and documentation sections remain importable", async () => {
   const parsed = await read(await mutateWorkbook((sheet, workbook) => {
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, defval: "", blankrows: true });
     const sectionIndex = rows.findIndex((row) => row[0] === "E. CATATAN");
     workbook.Sheets.Survey = XLSX.utils.aoa_to_sheet(rows.slice(0, sectionIndex));
+    delete workbook.Sheets.DocumentationData;
+    workbook.SheetNames = workbook.SheetNames.filter((name) => name !== "DocumentationData");
   }));
   const expected = fixture();
   expected.remarks = [{ description: "" }];
+  expected.documentation = [{ photo: "", description: "" }];
   assert.deepEqual(parsed, expected);
+});
+
+test("older exports without the documentation section remain importable", async () => {
+  const parsed = await read(await mutateWorkbook((sheet, workbook) => {
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, defval: "", blankrows: true });
+    const sectionIndex = rows.findIndex((row) => row[0] === "F. DOKUMENTASI");
+    workbook.Sheets.Survey = XLSX.utils.aoa_to_sheet(rows.slice(0, sectionIndex));
+    delete workbook.Sheets.DocumentationData;
+    workbook.SheetNames = workbook.SheetNames.filter((name) => name !== "DocumentationData");
+  }));
+  const expected = fixture();
+  expected.documentation = [{ photo: "", description: "" }];
+  assert.deepEqual(parsed, expected);
+});
+
+test("reject documentation rows without embedded photo data", async () => {
+  await assert.rejects(read(await mutateWorkbook((sheet, workbook) => {
+    delete workbook.Sheets.DocumentationData;
+    workbook.SheetNames = workbook.SheetNames.filter((name) => name !== "DocumentationData");
+  })), /Foto wajib diisi/);
 });
 
 test("older remarks headers named Deskripsi remain importable", async () => {

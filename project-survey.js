@@ -86,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
     materials: [{ description: "", qty: "", unit: "", note: "" }],
     extras: [{ description: "", qty: "", unit: "", note: "" }],
     remarks: [{ description: "" }],
+    documentation: [{ photo: "", description: "" }],
   };
 
   const sectionConfig = {
@@ -115,6 +116,13 @@ document.addEventListener("DOMContentLoaded", () => {
     remarks: {
       target: document.getElementById("remarkRows"),
       columns: [{ key: "description", label: "Catatan", input: "text" }],
+    },
+    documentation: {
+      target: document.getElementById("documentationRows"),
+      columns: [
+        { key: "photo", label: "Foto", input: "photo" },
+        { key: "description", label: "Deskripsi", input: "text" },
+      ],
     },
   };
 
@@ -222,6 +230,11 @@ document.addEventListener("DOMContentLoaded", () => {
       rowElement.appendChild(rowNumber(rowIndex + 1));
 
       config.columns.forEach((column) => {
+        if (column.input === "photo") {
+          rowElement.appendChild(createPhotoField(row[column.key], rowIndex));
+          return;
+        }
+
         const label = document.createElement("label");
         label.className = "survey-row-field";
 
@@ -248,6 +261,129 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     config.target.replaceChildren(fragment);
+  }
+
+  function createPhotoField(value, rowIndex) {
+    const field = document.createElement("div");
+    field.className = "survey-photo-field";
+
+    const valueInput = document.createElement("input");
+    valueInput.type = "hidden";
+    valueInput.value = value || "";
+    valueInput.dataset.section = "documentation";
+    valueInput.dataset.field = "photo";
+
+    const preview = document.createElement("div");
+    preview.className = "survey-photo-preview";
+    if (value) {
+      const image = document.createElement("img");
+      image.src = value;
+      image.alt = `Foto dokumentasi ${rowIndex + 1}`;
+      preview.appendChild(image);
+    } else {
+      preview.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i><span>Belum ada foto</span>';
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "survey-photo-actions";
+    actions.append(
+      photoChoiceButton("camera", "bi-camera", "Ambil Dari Kamera"),
+      photoChoiceButton("gallery", "bi-images", "Ambil Dari Galeri")
+    );
+
+    if (value) {
+      const clearButton = document.createElement("button");
+      clearButton.type = "button";
+      clearButton.className = "survey-photo-clear";
+      clearButton.dataset.clearPhoto = "";
+      clearButton.innerHTML = '<i class="bi bi-trash" aria-hidden="true"></i><span>Hapus Foto</span>';
+      actions.appendChild(clearButton);
+    }
+
+    const cameraInput = photoFileInput("camera", true);
+    const galleryInput = photoFileInput("gallery", false);
+    field.append(valueInput, preview, actions, cameraInput, galleryInput);
+    return field;
+  }
+
+  function photoChoiceButton(source, icon, label) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "survey-photo-choice";
+    button.dataset.photoSource = source;
+    button.innerHTML = `<i class="bi ${icon}" aria-hidden="true"></i><span>${label}</span>`;
+    return button;
+  }
+
+  function photoFileInput(source, capture) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.className = "survey-photo-file";
+    input.dataset.photoInput = source;
+    input.setAttribute("aria-label", source === "camera" ? "Ambil Dari Kamera" : "Ambil Dari Galeri");
+    if (capture) input.setAttribute("capture", "environment");
+    return input;
+  }
+
+  async function prepareDocumentationPhoto(file) {
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Pilih file foto yang valid.");
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      throw new Error("Ukuran foto maksimal 20 MB.");
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const image = await loadDocumentationImage(objectUrl);
+      const maxDimension = 1280;
+      const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Foto tidak bisa diproses oleh browser ini.");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", 0.75);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
+
+  function loadDocumentationImage(source) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Foto tidak bisa dibaca. Pilih file JPG atau PNG lain."));
+      image.src = source;
+    });
+  }
+
+  async function updateDocumentationPhoto(fileInput) {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const rowElement = fileInput.closest(".survey-row");
+    const rowIndex = Number(rowElement?.dataset.rowIndex);
+    const buttons = rowElement?.querySelectorAll("button") ?? [];
+    buttons.forEach((button) => { button.disabled = true; });
+    setStatus("Memproses foto dokumentasi...", "info");
+
+    try {
+      const photo = await prepareDocumentationPhoto(file);
+      syncStateFromForm();
+      if (!Number.isInteger(rowIndex) || !state.documentation[rowIndex]) return;
+      state.documentation[rowIndex].photo = photo;
+      renderSection("documentation");
+      updateUnsavedProtection();
+      setStatus("Foto dokumentasi berhasil ditambahkan.", "success");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Foto belum bisa ditambahkan.", "danger");
+      buttons.forEach((button) => { button.disabled = false; });
+      fileInput.value = "";
+    }
   }
 
   function createRowControl(column, row = {}) {
@@ -327,6 +463,7 @@ document.addEventListener("DOMContentLoaded", () => {
       materials: [emptyRow(sectionConfig.materials.columns)],
       extras: [emptyRow(sectionConfig.extras.columns)],
       remarks: [emptyRow(sectionConfig.remarks.columns)],
+      documentation: [emptyRow(sectionConfig.documentation.columns)],
     };
   }
 
@@ -349,7 +486,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const row = sectionConfig[sectionKey].target.querySelector(
       `.survey-row[data-row-index="${rowIndex}"]`
     );
-    row?.querySelector("input, select")?.focus();
+    row?.querySelector('input:not([type="hidden"]), select, button')?.focus();
   }
 
   function collectFormData({ format = false } = {}) {
@@ -364,6 +501,7 @@ document.addEventListener("DOMContentLoaded", () => {
       materials: collectRows("materials", format),
       extras: collectRows("extras", format),
       remarks: collectRows("remarks", format),
+      documentation: collectRows("documentation", format),
     };
 
     Object.keys(sectionConfig).forEach((sectionKey) => {
@@ -710,6 +848,11 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
+          if (column.input === "photo") {
+            normalizedRow[column.key] = isDocumentationPhoto(value) ? value : "";
+            return;
+          }
+
           normalizedRow[column.key] = value;
         });
 
@@ -970,6 +1113,11 @@ document.addEventListener("DOMContentLoaded", () => {
         title: "Catatan",
         requiredFields: ["description"],
       },
+      {
+        key: "documentation",
+        title: "Dokumentasi",
+        requiredFields: ["photo", "description"],
+      },
     ];
 
     for (const rule of sectionRules) {
@@ -1003,13 +1151,22 @@ document.addEventListener("DOMContentLoaded", () => {
     return value === "" || value === null || value === undefined;
   }
 
+  function isDocumentationPhoto(value) {
+    return /^data:image\/(?:jpeg|png);base64,[a-z0-9+/=]+$/i.test(String(value || ""));
+  }
+
   function fieldLabel(sectionKey, fieldKey) {
     return sectionConfig[sectionKey].columns.find((column) => column.key === fieldKey)?.label ?? fieldKey;
   }
 
   function focusRowInput(sectionKey, rowIndex, fieldKey) {
     const rows = sectionConfig[sectionKey].target.querySelectorAll(".survey-row:not(.survey-row-header)");
-    rows[rowIndex]?.querySelector(`[data-field="${fieldKey}"]`)?.focus();
+    const row = rows[rowIndex];
+    if (fieldKey === "photo") {
+      row?.querySelector("[data-photo-source]")?.focus();
+      return;
+    }
+    row?.querySelector(`[data-field="${fieldKey}"]`)?.focus();
   }
 
   function markSurveySaved(data) {
@@ -1256,7 +1413,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return maxLength ? Math.min(255, maxLength + 1) : 8;
   }
 
-  function buildWorksheetXml(data) {
+  function buildWorksheetXml(data, documentationPhotos = []) {
     const rows = [];
     const mergedCells = ["A6:G6"];
     const locationColumnWidth = worksheetTightColumnWidth([
@@ -1317,6 +1474,14 @@ document.addEventListener("DOMContentLoaded", () => {
     rowNumber = appendItemSection(rows, rowNumber, "D. PEKERJAAN TAMBAHAN", data.extras, mergedCells);
     rowNumber += 1;
     rowNumber = appendRemarkSection(rows, rowNumber, data.remarks, mergedCells);
+    rowNumber += 1;
+    rowNumber = appendDocumentationSection(
+      rows,
+      rowNumber,
+      data.documentation,
+      mergedCells,
+      documentationPhotos
+    );
 
     const lastRow = rowNumber - 1;
     const mergedCellsXml = mergedCells.map((ref) => `<mergeCell ref="${ref}"/>`).join("");
@@ -1430,6 +1595,103 @@ document.addEventListener("DOMContentLoaded", () => {
     return rowNumber;
   }
 
+  function appendDocumentationSection(rows, rowNumber, documentation, mergedCells, photos) {
+    rows.push(rowXml(rowNumber, [cell(`A${rowNumber}`, 4, "F. DOKUMENTASI")]));
+    rowNumber += 1;
+    rows.push(rowXml(rowNumber, [cell(`A${rowNumber}`, 4, "")]));
+    rowNumber += 1;
+    rows.push(rowXml(rowNumber, [
+      cell(`A${rowNumber}`, 1, "No"),
+      cell(`B${rowNumber}`, 1, "Foto"),
+      cell(`C${rowNumber}`, 1, ""),
+      cell(`D${rowNumber}`, 1, ""),
+      cell(`E${rowNumber}`, 1, ""),
+      cell(`F${rowNumber}`, 1, "Deskripsi"),
+      cell(`G${rowNumber}`, 1, ""),
+    ], { height: 15, customHeight: true }));
+    mergedCells.push(`B${rowNumber}:E${rowNumber}`, `F${rowNumber}:G${rowNumber}`);
+    rowNumber += 1;
+
+    documentation.forEach((item, index) => {
+      const image = parseDocumentationImage(item.photo);
+      rows.push(rowXml(rowNumber, [
+        cell(`A${rowNumber}`, 2, index + 1),
+        cell(`B${rowNumber}`, 3, ""),
+        cell(`C${rowNumber}`, 3, ""),
+        cell(`D${rowNumber}`, 3, ""),
+        cell(`E${rowNumber}`, 3, ""),
+        cell(`F${rowNumber}`, 3, item.description),
+        cell(`G${rowNumber}`, 3, ""),
+      ], { height: image ? 120 : rowHeightForTextValues(item.description), customHeight: Boolean(image) }));
+      mergedCells.push(`B${rowNumber}:E${rowNumber}`, `F${rowNumber}:G${rowNumber}`);
+      if (image) photos.push({ rowNumber, image });
+      rowNumber += 1;
+    });
+
+    return rowNumber;
+  }
+
+  function parseDocumentationImage(value) {
+    const match = /^data:image\/(png|jpeg);base64,([a-z0-9+/=]+)$/i.exec(String(value || ""));
+    if (!match) return null;
+    const format = match[1].toLowerCase();
+    return {
+      base64: match[2],
+      extension: format === "png" ? "png" : "jpg",
+      pdfFormat: format === "png" ? "PNG" : "JPEG",
+    };
+  }
+
+  function buildDocumentationDataWorksheetXml(documentation) {
+    const rows = [rowXml(1, [
+      cell("A1", 0, "PROJECT SURVEY DOCUMENTATION DATA"),
+      cell("B1", 0, "1"),
+    ])];
+    let rowNumber = 2;
+
+    documentation.forEach((item, itemIndex) => {
+      const photo = String(item.photo || "");
+      if (!parseDocumentationImage(photo)) return;
+      const chunks = photo.match(/.{1,30000}/g) || [];
+      chunks.forEach((chunk, chunkIndex) => {
+        rows.push(rowXml(rowNumber, [
+          cell(`A${rowNumber}`, 0, itemIndex + 1),
+          cell(`B${rowNumber}`, 0, chunkIndex + 1),
+          cell(`C${rowNumber}`, 0, chunk),
+        ]));
+        rowNumber += 1;
+      });
+    });
+
+    const lastRow = Math.max(1, rowNumber - 1);
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:C${lastRow}"/><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><sheetData>${rows.join("")}</sheetData></worksheet>`;
+  }
+
+  function buildDrawingXml(documentationPhotos) {
+    const logoAnchor = `<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>1</xdr:col><xdr:colOff>1366859</xdr:colOff><xdr:row>4</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="3" name="Picture 2"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId1"><a:extLst><a:ext uri="{28A0092B-C50C-407E-A947-70E740481C1C}"><a14:useLocalDpi xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" val="0"/></a:ext></a:extLst></a:blip><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1821942" cy="719667"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>`;
+    const photoAnchors = documentationPhotos.map((photo, index) => {
+      const relationshipId = index + 2;
+      const pictureId = index + 4;
+      const rowIndex = photo.rowNumber - 1;
+      return `<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>1</xdr:col><xdr:colOff>95250</xdr:colOff><xdr:row>${rowIndex}</xdr:row><xdr:rowOff>95250</xdr:rowOff></xdr:from><xdr:to><xdr:col>5</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${rowIndex + 1}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${pictureId}" name="Documentation ${index + 1}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId${relationshipId}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>`;
+    }).join("");
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">${logoAnchor}${photoAnchors}</xdr:wsDr>`;
+  }
+
+  function buildDrawingRelationshipsXml(documentationPhotos) {
+    const relationships = [
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>',
+      ...documentationPhotos.map((photo, index) => (
+        `<Relationship Id="rId${index + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${index + 2}.${photo.image.extension}"/>`
+      )),
+    ];
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${relationships.join("")}</Relationships>`;
+  }
+
   function buildStylesXml() {
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac x16r2 xr" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" xmlns:x16r2="http://schemas.microsoft.com/office/spreadsheetml/2015/02/main" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision"><fonts count="6" x14ac:knownFonts="1"><font><sz val="11"/><color rgb="FF000000"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font><font><b/><sz val="11"/><name val="Arial"/><family val="2"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/><family val="2"/></font><font><sz val="11"/><name val="Arial"/><family val="2"/></font><font><b/><sz val="16"/><name val="Arial"/><family val="2"/></font><font><sz val="11"/><color rgb="FF000000"/><name val="Arial"/><family val="2"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="14"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="3" fontId="3" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="3" fontId="3" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf><xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="3" fontId="3" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf><xf numFmtId="0" fontId="5" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles><dxfs count="0"/><tableStyles count="0" defaultTableStyle="TableStyleMedium2" defaultPivotStyle="PivotStyleLight16"/></styleSheet>`;
@@ -1438,11 +1700,13 @@ document.addEventListener("DOMContentLoaded", () => {
   async function buildXlsx(data) {
     const createdAt = new Date().toISOString();
     const logoBase64 = await getLogoBase64();
+    const documentationPhotos = [];
+    const worksheetXml = buildWorksheetXml(data, documentationPhotos);
     const files = [
       {
         name: "[Content_Types].xml",
         data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="png" ContentType="image/png"/><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>`,
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="png" ContentType="image/png"/><Default Extension="jpg" ContentType="image/jpeg"/><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>`,
       },
       {
         name: "_rels/.rels",
@@ -1452,12 +1716,12 @@ document.addEventListener("DOMContentLoaded", () => {
       {
         name: "xl/workbook.xml",
         data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><fileVersion appName="xl" lastEdited="7" lowestEdited="5" rupBuild="10426"/><workbookPr filterPrivacy="1"/><bookViews><workbookView xWindow="0" yWindow="600" windowWidth="28800" windowHeight="15940"/></bookViews><sheets><sheet name="Survey" sheetId="1" r:id="rId1"/></sheets><calcPr calcId="191029"/></workbook>`,
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><fileVersion appName="xl" lastEdited="7" lowestEdited="5" rupBuild="10426"/><workbookPr filterPrivacy="1"/><bookViews><workbookView xWindow="0" yWindow="600" windowWidth="28800" windowHeight="15940"/></bookViews><sheets><sheet name="Survey" sheetId="1" r:id="rId1"/><sheet name="DocumentationData" sheetId="2" state="hidden" r:id="rId2"/></sheets><calcPr calcId="191029"/></workbook>`,
       },
       {
         name: "xl/_rels/workbook.xml.rels",
         data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`,
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>`,
       },
       {
         name: "xl/styles.xml",
@@ -1465,7 +1729,11 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       {
         name: "xl/worksheets/sheet1.xml",
-        data: buildWorksheetXml(data),
+        data: worksheetXml,
+      },
+      {
+        name: "xl/worksheets/sheet2.xml",
+        data: buildDocumentationDataWorksheetXml(data.documentation),
       },
       {
         name: "xl/worksheets/_rels/sheet1.xml.rels",
@@ -1474,13 +1742,11 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       {
         name: "xl/drawings/drawing1.xml",
-        data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>1</xdr:col><xdr:colOff>1366859</xdr:colOff><xdr:row>4</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="3" name="Picture 2"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId1"><a:extLst><a:ext uri="{28A0092B-C50C-407E-A947-70E740481C1C}"><a14:useLocalDpi xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" val="0"/></a:ext></a:extLst></a:blip><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1821942" cy="719667"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>`,
+        data: buildDrawingXml(documentationPhotos),
       },
       {
         name: "xl/drawings/_rels/drawing1.xml.rels",
-        data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/></Relationships>`,
+        data: buildDrawingRelationshipsXml(documentationPhotos),
       },
       {
         name: "xl/media/image1.png",
@@ -1494,9 +1760,16 @@ document.addEventListener("DOMContentLoaded", () => {
       {
         name: "docProps/app.xml",
         data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Microsoft Excel</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>Survey</vt:lpstr></vt:vector></TitlesOfParts><Company>Perkom Indah Murni</Company><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc><HyperlinksChanged>false</HyperlinksChanged><AppVersion>16.0300</AppVersion></Properties>`,
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Microsoft Excel</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>2</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size="2" baseType="lpstr"><vt:lpstr>Survey</vt:lpstr><vt:lpstr>DocumentationData</vt:lpstr></vt:vector></TitlesOfParts><Company>Perkom Indah Murni</Company><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc><HyperlinksChanged>false</HyperlinksChanged><AppVersion>16.0300</AppVersion></Properties>`,
       },
     ];
+
+    documentationPhotos.forEach((photo, index) => {
+      files.push({
+        name: `xl/media/image${index + 2}.${photo.image.extension}`,
+        data: base64ToUint8Array(photo.image.base64),
+      });
+    });
 
     return createZip(files, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   }
@@ -1721,6 +1994,12 @@ document.addEventListener("DOMContentLoaded", () => {
       { label: "No", width: 34.04, align: "center", key: "no" },
       { label: "Catatan", width: 520.72, align: "left", key: "description", wrap: true },
     ],
+    documentationColumns: [
+      { label: "No", width: 34.04, align: "center", key: "no" },
+      { label: "Foto", width: 333.76, align: "center", key: "photo", image: true },
+      { label: "Deskripsi", width: 186.96, align: "left", key: "description", wrap: true },
+    ],
+    documentationPhotoRowHeight: 120,
   };
 
   function drawPdf(data, logoDataUrl) {
@@ -1762,7 +2041,8 @@ document.addEventListener("DOMContentLoaded", () => {
       + PDF_LAYOUT.table.sectionGap;
     nextY = drawItemPdfSection(doc, "D. PEKERJAAN TAMBAHAN", data.extras, nextY)
       + PDF_LAYOUT.table.sectionGap;
-    drawRemarkPdfSection(doc, data.remarks, nextY);
+    nextY = drawRemarkPdfSection(doc, data.remarks, nextY) + PDF_LAYOUT.table.sectionGap;
+    drawDocumentationPdfSection(doc, data.documentation, nextY);
     drawPdfPageNumbers(doc);
 
     return doc;
@@ -1858,6 +2138,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function drawDocumentationPdfSection(doc, documentation, topY) {
+    return drawPdfSection(doc, {
+      title: "F. DOKUMENTASI",
+      topY,
+      width: PDF_LAYOUT.itemTableWidth,
+      columns: PDF_LAYOUT.documentationColumns,
+      rows: documentation.map((row, index) => ({
+        no: index + 1,
+        photo: row.photo,
+        description: row.description,
+      })),
+      minimumRowHeight: (row) => (
+        parseDocumentationImage(row.photo) ? PDF_LAYOUT.documentationPhotoRowHeight : 0
+      ),
+    });
+  }
+
   function drawPdfSection(doc, config) {
     const left = PDF_LAYOUT.table.left;
     const headerHeight = PDF_LAYOUT.table.headerHeight;
@@ -1871,16 +2168,19 @@ document.addEventListener("DOMContentLoaded", () => {
     doc.setFontSize(10.12);
     const preparedRows = rows.map((row) => {
       const cells = config.columns.map((column) => (
-        column.wrap
+        column.image
+          ? []
+          : column.wrap
           ? wrapPdfText(doc, row[column.key] ?? "", getPdfTextMaxWidth(column))
           : [fitText(doc, row[column.key] ?? "", getPdfTextMaxWidth(column))]
       ));
       const lineCount = Math.max(...cells.map((lines) => lines.length));
-      const height = getPdfWrappedRowHeight(lineCount);
+      const minimumHeight = config.minimumRowHeight?.(row) || 0;
+      const height = Math.max(getPdfWrappedRowHeight(lineCount), minimumHeight);
       const requiredHeight = height > fullPageRowHeight + fitTolerance
         ? PDF_LAYOUT.table.rowHeight
         : height;
-      return { cells, lineCount, requiredHeight };
+      return { cells, lineCount, requiredHeight, minimumHeight, source: row };
     });
 
     let topY = config.topY;
@@ -1899,18 +2199,31 @@ document.addEventListener("DOMContentLoaded", () => {
       // Only rows taller than a full page need to continue across pages.
       let lineOffset = 0;
       while (lineOffset < row.lineCount) {
+        if (lineOffset === 0 && rowY + row.minimumHeight > pageBottom + fitTolerance) {
+          doc.addPage();
+          rowY = drawPdfSectionHeader(doc, config, continuationTopY, { showTitle: false });
+        }
         const availableLines = Math.max(1, 1 + Math.floor(
           (pageBottom - rowY - PDF_LAYOUT.table.rowHeight + fitTolerance)
             / PDF_LAYOUT.table.bodyLineHeight
         ));
         const lineCount = Math.min(row.lineCount - lineOffset, availableLines);
-        const rowHeight = getPdfWrappedRowHeight(lineCount);
+        const rowHeight = Math.max(
+          getPdfWrappedRowHeight(lineCount),
+          lineOffset === 0 ? row.minimumHeight : 0
+        );
         drawGrid(doc, left, rowY, config.width, rowHeight, config.columns);
 
         let cellX = left;
         config.columns.forEach((column, index) => {
-          const lines = row.cells[index].slice(lineOffset, lineOffset + lineCount);
-          drawPdfCellText(doc, lines, column, cellX, rowY, rowHeight);
+          if (column.image) {
+            if (lineOffset === 0) {
+              drawPdfCellImage(doc, row.source[column.key], column, cellX, rowY, rowHeight);
+            }
+          } else {
+            const lines = row.cells[index].slice(lineOffset, lineOffset + lineCount);
+            drawPdfCellText(doc, lines, column, cellX, rowY, rowHeight);
+          }
           cellX += column.width;
         });
 
@@ -1924,6 +2237,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     return rowY;
+  }
+
+  function drawPdfCellImage(doc, value, column, cellX, rowY, rowHeight) {
+    const image = parseDocumentationImage(value);
+    if (!image) return;
+    const padding = 6;
+    const maxWidth = Math.max(1, column.width - padding * 2);
+    const maxHeight = Math.max(1, rowHeight - padding * 2);
+    const properties = doc.getImageProperties(value);
+    const scale = Math.min(maxWidth / properties.width, maxHeight / properties.height);
+    const width = properties.width * scale;
+    const height = properties.height * scale;
+    doc.addImage(
+      value,
+      image.pdfFormat,
+      cellX + (column.width - width) / 2,
+      rowY + (rowHeight - height) / 2,
+      width,
+      height,
+      undefined,
+      "FAST"
+    );
   }
 
   function drawPdfSectionHeader(doc, config, topY, { showTitle = true } = {}) {
@@ -2490,6 +2825,34 @@ document.addEventListener("DOMContentLoaded", () => {
     normalizePullCable(state.pulls[rowIndex]);
     renderSection("pulls");
     updateUnsavedProtection();
+  });
+
+  sectionConfig.documentation.target.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const sourceButton = target?.closest("[data-photo-source]");
+    if (sourceButton) {
+      sourceButton.closest(".survey-photo-field")
+        ?.querySelector(`[data-photo-input="${sourceButton.dataset.photoSource}"]`)
+        ?.click();
+      return;
+    }
+
+    const clearButton = target?.closest("[data-clear-photo]");
+    if (!clearButton) return;
+    const photoInput = clearButton.closest(".survey-photo-field")?.querySelector('[data-field="photo"]');
+    if (!photoInput) return;
+    photoInput.value = "";
+    syncStateFromForm();
+    renderSection("documentation");
+    updateUnsavedProtection();
+    setStatus("Foto dokumentasi dihapus.", "success");
+  });
+
+  sectionConfig.documentation.target.addEventListener("change", (event) => {
+    const fileInput = event.target instanceof HTMLInputElement
+      ? event.target.closest("[data-photo-input]")
+      : null;
+    if (fileInput) updateDocumentationPhoto(fileInput);
   });
 
   document.querySelectorAll("[data-add-row]").forEach((button) => {

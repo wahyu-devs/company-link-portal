@@ -20,6 +20,9 @@
     { key: "remarks", title: "E. CATATAN", columns: [
       ["description", "Catatan", ["Deskripsi"]],
     ], optional: true },
+    { key: "documentation", title: "F. DOKUMENTASI", columns: [
+      ["photo", "Foto"], ["description", "Deskripsi"],
+    ], optional: true },
   ];
   let libraryPromise;
 
@@ -143,14 +146,74 @@
       if (!Number.isInteger(number) || number < 1) {
         throw new Error(`${section.title}, baris Excel ${index + 1}: nomor item tidak valid.`);
       }
+      if (section.key === "documentation") row.__itemNumber = number;
       for (const column of columns) {
-        if (column.key !== "note" && isBlank(row[column.key])) {
+        if (column.key !== "note" && column.key !== "photo" && isBlank(row[column.key])) {
           throw new Error(`${section.title}, baris Excel ${index + 1}: ${column.name} wajib diisi.`);
         }
       }
       data.push(row);
     }
     return data.length ? data : [Object.fromEntries(section.columns.map(([key]) => [key, ""]))];
+  }
+
+  function readDocumentationPhotos(workbook, XLSX) {
+    const sheet = workbook.Sheets.DocumentationData;
+    if (!sheet) return new Map();
+    if (!sheet["!ref"]) throw new Error("Data foto dokumentasi di Excel tidak valid.");
+
+    for (const [address, cell] of Object.entries(sheet)) {
+      if (!address.startsWith("!") && (cell.f || cell.t === "e")) {
+        throw new Error(`Data foto dokumentasi pada sel ${address} berisi formula atau error.`);
+      }
+    }
+
+    const range = XLSX.utils.decode_range(sheet["!ref"]);
+    if (range.e.r >= 20000 || range.e.c >= 3) {
+      throw new Error("Data foto dokumentasi di Excel terlalu besar atau tidak valid.");
+    }
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      range: 0,
+      raw: true,
+      defval: "",
+      blankrows: true,
+    });
+    if (label(rows[0]?.[0]) !== "project survey documentation data") {
+      throw new Error("Data foto dokumentasi di Excel tidak sesuai format app.");
+    }
+
+    const groupedChunks = new Map();
+    rows.slice(1).forEach((row, offset) => {
+      if (row.every(isBlank)) return;
+      const itemNumber = Number(row[0]);
+      const chunkNumber = Number(row[1]);
+      const chunk = textValue(row[2], `Data foto dokumentasi, baris Excel ${offset + 2}`);
+      if (!Number.isInteger(itemNumber) || itemNumber < 1
+        || !Number.isInteger(chunkNumber) || chunkNumber < 1 || !chunk) {
+        throw new Error(`Data foto dokumentasi, baris Excel ${offset + 2}: data tidak valid.`);
+      }
+      const chunks = groupedChunks.get(itemNumber) || new Map();
+      if (chunks.has(chunkNumber)) {
+        throw new Error(`Data foto dokumentasi item ${itemNumber}: potongan gambar duplikat.`);
+      }
+      chunks.set(chunkNumber, chunk);
+      groupedChunks.set(itemNumber, chunks);
+    });
+
+    const photos = new Map();
+    groupedChunks.forEach((chunks, itemNumber) => {
+      const ordered = Array.from(chunks.keys()).sort((a, b) => a - b);
+      if (ordered.some((number, index) => number !== index + 1)) {
+        throw new Error(`Data foto dokumentasi item ${itemNumber}: potongan gambar tidak lengkap.`);
+      }
+      const photo = ordered.map((number) => chunks.get(number)).join("");
+      if (!/^data:image\/(?:png|jpeg);base64,[a-z0-9+/=]+$/i.test(photo)) {
+        throw new Error(`Data foto dokumentasi item ${itemNumber}: format gambar tidak valid.`);
+      }
+      photos.set(itemNumber, photo);
+    });
+    return photos;
   }
 
   function parseWorkbook(workbook, XLSX) {
@@ -200,6 +263,25 @@
       const nextStart = starts.slice(index + 1).find((start) => start >= 0) ?? rows.length;
       data[section.key] = readSection(rows, section, starts[index], nextStart);
     });
+
+    const documentationPhotos = readDocumentationPhotos(workbook, XLSX);
+    const documentationItemNumbers = new Set();
+    data.documentation.forEach((item, index) => {
+      const itemNumber = item.__itemNumber ?? index + 1;
+      delete item.__itemNumber;
+      if (documentationItemNumbers.has(itemNumber)) {
+        throw new Error(`F. DOKUMENTASI: nomor item ${itemNumber} duplikat.`);
+      }
+      documentationItemNumbers.add(itemNumber);
+      item.photo = documentationPhotos.get(itemNumber) || "";
+      if (isBlank(item.photo) !== isBlank(item.description)) {
+        const missing = isBlank(item.photo) ? "Foto" : "Deskripsi";
+        throw new Error(`F. DOKUMENTASI, item ${itemNumber}: ${missing} wajib diisi.`);
+      }
+    });
+    if (Array.from(documentationPhotos.keys()).some((itemNumber) => !documentationItemNumbers.has(itemNumber))) {
+      throw new Error("Data foto dokumentasi tidak memiliki baris yang sesuai.");
+    }
     return data;
   }
 

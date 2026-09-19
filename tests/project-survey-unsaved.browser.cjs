@@ -113,6 +113,10 @@ async function main() {
       await page.keyboard.press("Escape");
       await load();
       assert.equal(await page.locator("#remarkRows .survey-row-header span").nth(1).textContent(), "Catatan");
+      assert.deepEqual(
+        await page.locator("#documentationRows .survey-row-header span").allTextContents(),
+        ["No", "Foto", "Deskripsi", "Aksi"]
+      );
       await dirty(false);
       for (const id of ["surveyorName", "customerName", "customerPic", "projectName", "surveyDate"]) {
         const field = page.locator("#" + id);
@@ -128,6 +132,7 @@ async function main() {
         materials: "note",
         extras: "note",
         remarks: "description",
+        documentation: "description",
       };
       for (const [section, field] of Object.entries(sectionFields)) {
         const fields = page.locator(`[data-section="${section}"] [data-field="${field}"]`);
@@ -157,6 +162,33 @@ async function main() {
       await dirty(true);
       await page.locator("#saveSurvey").click();
       await dirty(false);
+    });
+
+    await check("documentation camera and gallery choices persist photos", async ({ page, dirty, saved, load }) => {
+      await load();
+      const photoField = page.locator("#documentationRows .survey-photo-field").first();
+      assert.equal(await photoField.locator('[data-photo-source="camera"] span').textContent(), "Ambil Dari Kamera");
+      assert.equal(await photoField.locator('[data-photo-source="gallery"] span').textContent(), "Ambil Dari Galeri");
+      assert.equal(await photoField.locator('[data-photo-input="camera"]').getAttribute("capture"), "environment");
+      assert.equal(await photoField.locator('[data-photo-input="gallery"]').getAttribute("capture"), null);
+      assert.equal(await photoField.locator(".survey-photo-preview img").count(), 1);
+
+      await photoField.locator('[data-photo-input="gallery"]').setInputFiles(
+        path.join(root, "assets/images/project-survey-logo.png")
+      );
+      await page.waitForFunction(() => document.querySelector('#documentationRows [data-field="photo"]')
+        ?.value.startsWith("data:image/jpeg;base64,"));
+      await dirty(true);
+      await page.locator("#saveSurvey").click();
+      await dirty(false);
+      assert((await saved()).find((draft) => draft.id === "first")
+        .data.documentation[0].photo.startsWith("data:image/jpeg;base64,"));
+
+      await photoField.locator("[data-clear-photo]").click();
+      await dirty(true);
+      await page.locator("#saveSurvey").click();
+      assert.match(await page.locator("#surveyToast").textContent(), /Foto wajib diisi/);
+      await dirty(true);
     });
 
     await check("New: Cancel, keyboard focus, Discard, and Save & Continue", async ({ page, dirty, saved, modal, choose, load }) => {
@@ -261,6 +293,7 @@ async function main() {
         draft.data.pulls[0].qty = "0";
         draft.data.activeDevices = [];
         delete draft.data.remarks;
+        delete draft.data.documentation;
         localStorage.setItem(key, JSON.stringify([draft]));
       }, { key: storageKey, draft: firstDraft });
       await load();

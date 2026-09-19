@@ -114,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     remarks: {
       target: document.getElementById("remarkRows"),
-      columns: [{ key: "description", label: "Deskripsi", input: "text" }],
+      columns: [{ key: "description", label: "Catatan", input: "text" }],
     },
   };
 
@@ -1299,11 +1299,11 @@ document.addEventListener("DOMContentLoaded", () => {
     rowNumber += 1;
     rowNumber = appendPullSection(rows, rowNumber, data.pulls);
     rowNumber += 1;
-    rowNumber = appendItemSection(rows, rowNumber, "B. PERANGKAT AKTIF", data.activeDevices);
+    rowNumber = appendItemSection(rows, rowNumber, "B. PERANGKAT AKTIF", data.activeDevices, mergedCells);
     rowNumber += 1;
-    rowNumber = appendItemSection(rows, rowNumber, "C. MATERIAL", data.materials);
+    rowNumber = appendItemSection(rows, rowNumber, "C. MATERIAL", data.materials, mergedCells);
     rowNumber += 1;
-    rowNumber = appendItemSection(rows, rowNumber, "D. PEKERJAAN TAMBAHAN", data.extras);
+    rowNumber = appendItemSection(rows, rowNumber, "D. PEKERJAAN TAMBAHAN", data.extras, mergedCells);
     rowNumber += 1;
     rowNumber = appendRemarkSection(rows, rowNumber, data.remarks, mergedCells);
 
@@ -1351,7 +1351,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return rowNumber;
   }
 
-  function appendItemSection(rows, rowNumber, title, items) {
+  function appendItemSection(rows, rowNumber, title, items, mergedCells) {
     rows.push(rowXml(rowNumber, [cell(`A${rowNumber}`, 4, title)]));
     rowNumber += 1;
     rows.push(rowXml(rowNumber, [cell(`A${rowNumber}`, 4, "")]));
@@ -1359,24 +1359,26 @@ document.addEventListener("DOMContentLoaded", () => {
     rows.push(rowXml(rowNumber, [
       cell(`A${rowNumber}`, 1, "No"),
       cell(`B${rowNumber}`, 1, "Deskripsi"),
-      cell(`C${rowNumber}`, 5, "Qty"),
-      cell(`D${rowNumber}`, 1, "Satuan"),
-      cell(`E${rowNumber}`, 1, "Catatan"),
-      cell(`F${rowNumber}`, 10, ""),
-      cell(`G${rowNumber}`, 10, ""),
+      cell(`C${rowNumber}`, 1, ""),
+      cell(`D${rowNumber}`, 5, "Qty"),
+      cell(`E${rowNumber}`, 1, "Satuan"),
+      cell(`F${rowNumber}`, 1, "Catatan"),
+      cell(`G${rowNumber}`, 1, ""),
     ], { height: 15, customHeight: true }));
+    mergedCells.push(`B${rowNumber}:C${rowNumber}`, `F${rowNumber}:G${rowNumber}`);
     rowNumber += 1;
 
     items.forEach((item, index) => {
       rows.push(rowXml(rowNumber, [
         cell(`A${rowNumber}`, 2, index + 1),
         cell(`B${rowNumber}`, 3, item.description),
-        cell(`C${rowNumber}`, 2, item.qty),
-        cell(`D${rowNumber}`, 7, item.unit),
-        cell(`E${rowNumber}`, 3, item.note),
-        cell(`F${rowNumber}`, 11, ""),
-        cell(`G${rowNumber}`, 11, ""),
+        cell(`C${rowNumber}`, 3, ""),
+        cell(`D${rowNumber}`, 2, item.qty),
+        cell(`E${rowNumber}`, 7, item.unit),
+        cell(`F${rowNumber}`, 3, item.note),
+        cell(`G${rowNumber}`, 3, ""),
       ], { height: rowHeightForTextValues(item.description, item.note) }));
+      mergedCells.push(`B${rowNumber}:C${rowNumber}`, `F${rowNumber}:G${rowNumber}`);
       rowNumber += 1;
     });
 
@@ -1390,14 +1392,14 @@ document.addEventListener("DOMContentLoaded", () => {
     rowNumber += 1;
     rows.push(rowXml(rowNumber, [
       cell(`A${rowNumber}`, 1, "No"),
-      cell(`B${rowNumber}`, 1, "Deskripsi"),
+      cell(`B${rowNumber}`, 1, "Catatan"),
       cell(`C${rowNumber}`, 1, ""),
       cell(`D${rowNumber}`, 1, ""),
       cell(`E${rowNumber}`, 1, ""),
-      cell(`F${rowNumber}`, 10, ""),
-      cell(`G${rowNumber}`, 10, ""),
+      cell(`F${rowNumber}`, 1, ""),
+      cell(`G${rowNumber}`, 1, ""),
     ], { height: 15, customHeight: true }));
-    mergedCells.push(`B${rowNumber}:E${rowNumber}`);
+    mergedCells.push(`B${rowNumber}:G${rowNumber}`);
     rowNumber += 1;
 
     remarks.forEach((remark, index) => {
@@ -1407,10 +1409,10 @@ document.addEventListener("DOMContentLoaded", () => {
         cell(`C${rowNumber}`, 3, ""),
         cell(`D${rowNumber}`, 3, ""),
         cell(`E${rowNumber}`, 3, ""),
-        cell(`F${rowNumber}`, 11, ""),
-        cell(`G${rowNumber}`, 11, ""),
+        cell(`F${rowNumber}`, 3, ""),
+        cell(`G${rowNumber}`, 3, ""),
       ], { height: rowHeightForTextValues(remark.description) }));
-      mergedCells.push(`B${rowNumber}:E${rowNumber}`);
+      mergedCells.push(`B${rowNumber}:G${rowNumber}`);
       rowNumber += 1;
     });
 
@@ -1687,7 +1689,7 @@ document.addEventListener("DOMContentLoaded", () => {
       cellPaddingX: 4,
     },
     fullTableWidth: 554.76,
-    itemTableWidth: 367.8,
+    itemTableWidth: 554.76,
     pullColumns: [
       { label: "No", width: 34.04, align: "center", key: "no" },
       { label: "Jenis Tarikan", width: 123.28, align: "center", key: "type" },
@@ -1699,14 +1701,14 @@ document.addEventListener("DOMContentLoaded", () => {
     ],
     itemColumns: [
       { label: "No", width: 34.04, align: "center", key: "no" },
-      { label: "Deskripsi", width: 123.28, align: "left", key: "description", wrap: true },
+      { label: "Deskripsi", width: 189.52, align: "left", key: "description", wrap: true },
       { label: "Qty", width: 66.24, align: "center", key: "qty" },
-      { label: "Satuan", width: 66.24, align: "center", key: "unit" },
-      { label: "Catatan", width: 78, align: "left", key: "note", wrap: true },
+      { label: "Satuan", width: 78, align: "center", key: "unit" },
+      { label: "Catatan", width: 186.96, align: "left", key: "note", wrap: true },
     ],
     remarkColumns: [
       { label: "No", width: 34.04, align: "center", key: "no" },
-      { label: "Deskripsi", width: 333.76, align: "left", key: "description", wrap: true },
+      { label: "Catatan", width: 520.72, align: "left", key: "description", wrap: true },
     ],
   };
 

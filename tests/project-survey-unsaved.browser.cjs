@@ -112,6 +112,7 @@ async function main() {
       await dirty(false);
       await page.keyboard.press("Escape");
       await load();
+      assert.equal(await page.locator("#remarkRows .survey-row-header span").nth(1).textContent(), "Catatan");
       await dirty(false);
       for (const id of ["surveyorName", "customerName", "customerPic", "projectName", "surveyDate"]) {
         const field = page.locator("#" + id);

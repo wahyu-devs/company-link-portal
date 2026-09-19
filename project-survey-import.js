@@ -17,7 +17,9 @@
     { key: "activeDevices", title: "B. PERANGKAT AKTIF", columns: itemColumns },
     { key: "materials", title: "C. MATERIAL", columns: itemColumns },
     { key: "extras", title: "D. PEKERJAAN TAMBAHAN", columns: itemColumns },
-    { key: "remarks", title: "E. CATATAN", columns: [["description", "Deskripsi"]], optional: true },
+    { key: "remarks", title: "E. CATATAN", columns: [
+      ["description", "Catatan", ["Deskripsi"]],
+    ], optional: true },
   ];
   let libraryPromise;
 
@@ -101,13 +103,17 @@
     let headerIndex = start + 1;
     while (headerIndex < end && rows[headerIndex].every(isBlank)) headerIndex += 1;
     const headers = (rows[headerIndex] || []).map(label);
-    const allowedHeaders = ["no", ...section.columns.map(([, name]) => label(name))];
+    const allowedHeaders = [
+      "no",
+      ...section.columns.flatMap(([, name, aliases = []]) => [name, ...aliases].map(label)),
+    ];
     if (headers.filter((name) => name === "no").length !== 1
       || headers.some((name) => name && !allowedHeaders.includes(name))) {
       throw new Error(`${section.title}: header tabel tidak sesuai format app.`);
     }
-    const columns = section.columns.map(([key, name]) => {
-      const matches = headers.flatMap((header, index) => header === label(name) ? [index] : []);
+    const columns = section.columns.map(([key, name, aliases = []]) => {
+      const acceptedHeaders = [name, ...aliases].map(label);
+      const matches = headers.flatMap((header, index) => acceptedHeaders.includes(header) ? [index] : []);
       if (matches.length > 1 || (matches.length === 0 && key !== "note")) {
         throw new Error(`${section.title}: kolom ${name} tidak ditemukan atau duplikat.`);
       }

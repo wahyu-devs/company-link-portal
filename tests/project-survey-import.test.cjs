@@ -40,28 +40,48 @@ test("empty sections are restored as an empty editable row", async () => {
   }
 });
 
-test("remark descriptions span the item description through note columns", async () => {
+test("Excel item and remark columns use the requested spans", async () => {
   const workbook = XLSX.read(await (await exportFile()).arrayBuffer(), { type: "array" });
   const sheet = workbook.Sheets.Survey;
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, defval: "", blankrows: true });
-  const sectionIndex = rows.findIndex((row) => row[0] === "E. CATATAN");
-  const headerRow = sectionIndex + 2;
-  const dataRow = sectionIndex + 3;
   const merges = sheet["!merges"].map((range) => XLSX.utils.encode_range(range));
 
-  assert.deepEqual(rows[headerRow].slice(0, 5), ["No", "Deskripsi", "", "", ""]);
-  assert(merges.includes(`B${headerRow + 1}:E${headerRow + 1}`));
-  assert(merges.includes(`B${dataRow + 1}:E${dataRow + 1}`));
+  for (const title of ["B. PERANGKAT AKTIF", "C. MATERIAL", "D. PEKERJAAN TAMBAHAN"]) {
+    const sectionIndex = rows.findIndex((row) => row[0] === title);
+    const headerRow = sectionIndex + 2;
+    const dataRow = sectionIndex + 3;
+    assert.deepEqual(rows[headerRow].slice(0, 7), ["No", "Deskripsi", "", "Qty", "Satuan", "Catatan", ""]);
+    for (const row of [headerRow, dataRow]) {
+      assert(merges.includes(`B${row + 1}:C${row + 1}`));
+      assert(merges.includes(`F${row + 1}:G${row + 1}`));
+    }
+  }
+
+  const remarkSectionIndex = rows.findIndex((row) => row[0] === "E. CATATAN");
+  const remarkHeaderRow = remarkSectionIndex + 2;
+  const remarkDataRow = remarkSectionIndex + 3;
+  assert.deepEqual(rows[remarkHeaderRow].slice(0, 7), ["No", "Catatan", "", "", "", "", ""]);
+  assert(merges.includes(`B${remarkHeaderRow + 1}:G${remarkHeaderRow + 1}`));
+  assert(merges.includes(`B${remarkDataRow + 1}:G${remarkDataRow + 1}`));
 });
 
-test("PDF remark descriptions span the item description through note columns", () => {
-  const remarkWidth = pdfLayout.remarkColumns.reduce((total, column) => total + column.width, 0);
-  const itemDescriptionThroughNoteWidth = pdfLayout.itemColumns
-    .slice(1)
-    .reduce((total, column) => total + column.width, 0);
+test("PDF item and remark columns match the Excel column spans", () => {
+  const pullWidths = pdfLayout.pullColumns.map((column) => column.width);
+  const sumWidths = (widths) => Number(widths.reduce((total, width) => total + width, 0).toFixed(2));
+  const remarkWidth = sumWidths(pdfLayout.remarkColumns.map((column) => column.width));
+  const itemWidths = pdfLayout.itemColumns.map((column) => column.width);
 
+  assert.equal(pdfLayout.itemTableWidth, pdfLayout.fullTableWidth);
+  assert.deepEqual(itemWidths, [
+    pullWidths[0],
+    sumWidths(pullWidths.slice(1, 3)),
+    pullWidths[3],
+    pullWidths[4],
+    sumWidths(pullWidths.slice(5, 7)),
+  ]);
   assert.equal(remarkWidth, pdfLayout.itemTableWidth);
-  assert.equal(pdfLayout.remarkColumns[1].width, itemDescriptionThroughNoteWidth);
+  assert.equal(pdfLayout.remarkColumns[1].label, "Catatan");
+  assert.equal(pdfLayout.remarkColumns[1].width, sumWidths(pullWidths.slice(1)));
 });
 
 test("older exports without the remarks section remain importable", async () => {
@@ -73,6 +93,15 @@ test("older exports without the remarks section remain importable", async () => 
   const expected = fixture();
   expected.remarks = [{ description: "" }];
   assert.deepEqual(parsed, expected);
+});
+
+test("older remarks headers named Deskripsi remain importable", async () => {
+  const parsed = await read(await mutateWorkbook((sheet) => {
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, defval: "", blankrows: true });
+    const sectionIndex = rows.findIndex((row) => row[0] === "E. CATATAN");
+    sheet[`B${sectionIndex + 3}`].v = "Deskripsi";
+  }));
+  assert.deepEqual(parsed, fixture());
 });
 
 test("reject malformed remarks section headers", async () => {
@@ -98,11 +127,17 @@ test("section positions are discovered after inserting rows", async () => {
 
 test("item notes are optional in older exports", async () => {
   const parsed = await read(await mutateWorkbook((sheet) => {
-    for (const cell of Object.values(sheet)) {
-      if (cell?.v === "Catatan") cell.v = "";
-    }
-    for (const [address, cell] of Object.entries(sheet)) {
-      if (/^G\d+$/.test(address)) cell.v = "";
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, defval: "", blankrows: true });
+    const titles = ["A. TARIKAN KABEL", "B. PERANGKAT AKTIF", "C. MATERIAL", "D. PEKERJAAN TAMBAHAN", "E. CATATAN"];
+    const starts = titles.map((title) => rows.findIndex((row) => row[0] === title));
+    for (let section = 0; section < starts.length - 1; section += 1) {
+      const headerRow = starts[section] + 2;
+      const noteColumn = rows[headerRow].indexOf("Catatan");
+      if (noteColumn < 0) continue;
+      for (let row = headerRow; row < starts[section + 1]; row += 1) {
+        const address = XLSX.utils.encode_cell({ r: row, c: noteColumn });
+        if (sheet[address]) sheet[address].v = "";
+      }
     }
   }));
   assert.equal(parsed.pulls[0].note, "");

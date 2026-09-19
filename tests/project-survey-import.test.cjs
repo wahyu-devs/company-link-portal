@@ -3,7 +3,7 @@ const { test } = require("node:test");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const { root, fixture, exportFile } = require("./helpers/survey-fixtures.cjs");
+const { root, fixture, exportFile, pdfLayout } = require("./helpers/survey-fixtures.cjs");
 const XLSX = require("../assets/vendor/sheetjs/xlsx-0.20.3.mini.min.js");
 const context = vm.createContext({ XLSX, Date });
 vm.runInContext(fs.readFileSync(path.join(root, "project-survey-import.js"), "utf8"), context);
@@ -26,17 +26,61 @@ test("many rows, decimals, literal formula-like text and long notes survive impo
   data.materials[0].note = 'Long note <tag> & "quotes" '.repeat(100);
   data.materials[0].note = data.materials[0].note.trim();
   data.extras[0].description = "=SUM(A1:A2)";
+  data.remarks[0].description = "General note ".repeat(100).trim();
   assert.deepEqual(await read(await exportFile(data)), data);
 });
 
 test("empty sections are restored as an empty editable row", async () => {
   const data = fixture();
-  for (const key of ["pulls", "activeDevices", "materials", "extras"]) data[key] = [];
+  for (const key of ["pulls", "activeDevices", "materials", "extras", "remarks"]) data[key] = [];
   const parsed = await read(await exportFile(data));
-  for (const key of ["pulls", "activeDevices", "materials", "extras"]) {
+  for (const key of ["pulls", "activeDevices", "materials", "extras", "remarks"]) {
     assert.equal(parsed[key].length, 1);
     assert(Object.values(parsed[key][0]).every((value) => value === ""));
   }
+});
+
+test("remark descriptions span the item description through note columns", async () => {
+  const workbook = XLSX.read(await (await exportFile()).arrayBuffer(), { type: "array" });
+  const sheet = workbook.Sheets.Survey;
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, defval: "", blankrows: true });
+  const sectionIndex = rows.findIndex((row) => row[0] === "E. CATATAN");
+  const headerRow = sectionIndex + 2;
+  const dataRow = sectionIndex + 3;
+  const merges = sheet["!merges"].map((range) => XLSX.utils.encode_range(range));
+
+  assert.deepEqual(rows[headerRow].slice(0, 5), ["No", "Deskripsi", "", "", ""]);
+  assert(merges.includes(`B${headerRow + 1}:E${headerRow + 1}`));
+  assert(merges.includes(`B${dataRow + 1}:E${dataRow + 1}`));
+});
+
+test("PDF remark descriptions span the item description through note columns", () => {
+  const remarkWidth = pdfLayout.remarkColumns.reduce((total, column) => total + column.width, 0);
+  const itemDescriptionThroughNoteWidth = pdfLayout.itemColumns
+    .slice(1)
+    .reduce((total, column) => total + column.width, 0);
+
+  assert.equal(remarkWidth, pdfLayout.itemTableWidth);
+  assert.equal(pdfLayout.remarkColumns[1].width, itemDescriptionThroughNoteWidth);
+});
+
+test("older exports without the remarks section remain importable", async () => {
+  const parsed = await read(await mutateWorkbook((sheet, workbook) => {
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, defval: "", blankrows: true });
+    const sectionIndex = rows.findIndex((row) => row[0] === "E. CATATAN");
+    workbook.Sheets.Survey = XLSX.utils.aoa_to_sheet(rows.slice(0, sectionIndex));
+  }));
+  const expected = fixture();
+  expected.remarks = [{ description: "" }];
+  assert.deepEqual(parsed, expected);
+});
+
+test("reject malformed remarks section headers", async () => {
+  await assert.rejects(read(await mutateWorkbook((sheet) => {
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, defval: "", blankrows: true });
+    const sectionIndex = rows.findIndex((row) => row[0] === "E. CATATAN");
+    sheet[`B${sectionIndex + 3}`].v = "Wrong header";
+  })), /E\. CATATAN/);
 });
 
 test("compressed Excel-resaved files with shared strings import correctly", async () => {

@@ -16,6 +16,9 @@ const exportCode = source.slice(source.indexOf("  function escapeXml("), source.
   + source.slice(source.indexOf("  function base64ToUint8Array("), source.indexOf("  const PDF_LAYOUT ="))
   + source.slice(source.indexOf("  function formatSurveyDate("), source.indexOf("  function buildFileName("));
 vm.runInContext(exportCode, context);
+const pdfLayoutCode = source.slice(source.indexOf("  const PDF_LAYOUT ="), source.indexOf("  function drawPdf("))
+  + "\nglobalThis.projectSurveyPdfLayout = PDF_LAYOUT;";
+vm.runInContext(pdfLayoutCode, context);
 
 function fixture() {
   const item = (description) => ({ description, qty: 0, unit: "pcs", note: "" });
@@ -24,6 +27,7 @@ function fixture() {
     customerPic: "PIC", projectName: "Access Door Project",
     pulls: [{ type: "Data", qty: 0, unit: "mtr", cable: "UTP", location: "Room 1", note: "Panel East" }],
     activeDevices: [item("Switch")], materials: [item("RJ45")], extras: [item("Installation")],
+    remarks: [{ description: "Coordinate access with the site team" }],
   };
 }
 
@@ -32,4 +36,9 @@ async function exportFile(data = fixture()) {
   return { name: "survey.xlsx", size: blob.size, arrayBuffer: () => blob.arrayBuffer() };
 }
 
-module.exports = { root, fixture, exportFile };
+module.exports = {
+  root,
+  fixture,
+  exportFile,
+  pdfLayout: JSON.parse(JSON.stringify(context.projectSurveyPdfLayout)),
+};

@@ -17,6 +17,7 @@
     { key: "activeDevices", title: "B. PERANGKAT AKTIF", columns: itemColumns },
     { key: "materials", title: "C. MATERIAL", columns: itemColumns },
     { key: "extras", title: "D. PEKERJAAN TAMBAHAN", columns: itemColumns },
+    { key: "remarks", title: "E. CATATAN", columns: [["description", "Deskripsi"]], optional: true },
   ];
   let libraryPromise;
 
@@ -165,10 +166,14 @@
     const titleIndex = rows.findIndex((row) => label(row[0]) === "project survey form");
     const starts = sections.map((section) => {
       const matches = rows.flatMap((row, index) => label(row[0]) === label(section.title) ? [index] : []);
-      if (matches.length !== 1) throw new Error(`${section.title}: section tidak ditemukan atau duplikat.`);
-      return matches[0];
+      if (matches.length > 1 || (!section.optional && matches.length !== 1)) {
+        throw new Error(`${section.title}: section tidak ditemukan atau duplikat.`);
+      }
+      return matches[0] ?? -1;
     });
-    if (titleIndex < 0 || starts[0] <= titleIndex || starts.some((start, index) => index > 0 && start <= starts[index - 1])) {
+    const presentStarts = starts.filter((start) => start >= 0);
+    if (titleIndex < 0 || presentStarts[0] <= titleIndex
+      || presentStarts.some((start, index) => index > 0 && start <= presentStarts[index - 1])) {
       throw new Error("Struktur Excel tidak sesuai Project Survey Form.");
     }
     const data = {};
@@ -182,7 +187,12 @@
       if (!data[key]) throw new Error(`${name} wajib diisi.`);
     }
     sections.forEach((section, index) => {
-      data[section.key] = readSection(rows, section, starts[index], starts[index + 1] ?? rows.length);
+      if (starts[index] < 0) {
+        data[section.key] = [Object.fromEntries(section.columns.map(([key]) => [key, ""]))];
+        return;
+      }
+      const nextStart = starts.slice(index + 1).find((start) => start >= 0) ?? rows.length;
+      data[section.key] = readSection(rows, section, starts[index], nextStart);
     });
     return data;
   }

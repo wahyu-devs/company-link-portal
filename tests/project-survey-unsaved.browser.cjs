@@ -121,8 +121,15 @@ async function main() {
         await field.fill(original);
         await dirty(false);
       }
-      for (const section of ["pulls", "activeDevices", "materials", "extras"]) {
-        const fields = page.locator(`[data-section="${section}"] [data-field="note"]`);
+      const sectionFields = {
+        pulls: "note",
+        activeDevices: "note",
+        materials: "note",
+        extras: "note",
+        remarks: "description",
+      };
+      for (const [section, field] of Object.entries(sectionFields)) {
+        const fields = page.locator(`[data-section="${section}"] [data-field="${field}"]`);
         const original = await fields.inputValue();
         await fields.fill("Changed Note");
         await dirty(true);
@@ -133,6 +140,13 @@ async function main() {
         await page.locator(`[data-remove-row="${section}"]`).last().click();
         await dirty(false);
       }
+      const remarkDescription = page.locator('#remarkRows [data-field="description"]').first();
+      await remarkDescription.press("Enter");
+      assert.equal(await page.locator('#remarkRows [data-field="description"]').count(), 2);
+      assert.equal(await page.evaluate(() => document.activeElement?.dataset.field), "description");
+      await dirty(true);
+      await page.locator('[data-remove-row="remarks"]').last().click();
+      await dirty(false);
       await page.locator('#pullRows [data-field="type"]').selectOption("Power");
       await dirty(true);
       await page.locator('#pullRows [data-field="type"]').selectOption("Data");
@@ -245,6 +259,7 @@ async function main() {
       await page.evaluate(({ key, draft }) => {
         draft.data.pulls[0].qty = "0";
         draft.data.activeDevices = [];
+        delete draft.data.remarks;
         localStorage.setItem(key, JSON.stringify([draft]));
       }, { key: storageKey, draft: firstDraft });
       await load();

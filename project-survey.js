@@ -85,6 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
     activeDevices: [{ description: "", qty: "", unit: "", note: "" }],
     materials: [{ description: "", qty: "", unit: "", note: "" }],
     extras: [{ description: "", qty: "", unit: "", note: "" }],
+    remarks: [{ description: "" }],
   };
 
   const sectionConfig = {
@@ -110,6 +111,10 @@ document.addEventListener("DOMContentLoaded", () => {
     extras: {
       target: document.getElementById("extraRows"),
       columns: itemColumns(),
+    },
+    remarks: {
+      target: document.getElementById("remarkRows"),
+      columns: [{ key: "description", label: "Deskripsi", input: "text" }],
     },
   };
 
@@ -321,6 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
       activeDevices: [emptyRow(sectionConfig.activeDevices.columns)],
       materials: [emptyRow(sectionConfig.materials.columns)],
       extras: [emptyRow(sectionConfig.extras.columns)],
+      remarks: [emptyRow(sectionConfig.remarks.columns)],
     };
   }
 
@@ -357,6 +363,7 @@ document.addEventListener("DOMContentLoaded", () => {
       activeDevices: collectRows("activeDevices", format),
       materials: collectRows("materials", format),
       extras: collectRows("extras", format),
+      remarks: collectRows("remarks", format),
     };
 
     Object.keys(sectionConfig).forEach((sectionKey) => {
@@ -958,6 +965,11 @@ document.addEventListener("DOMContentLoaded", () => {
         title: "Pekerjaan Tambahan",
         requiredFields: ["description", "qty", "unit"],
       },
+      {
+        key: "remarks",
+        title: "Catatan",
+        requiredFields: ["description"],
+      },
     ];
 
     for (const rule of sectionRules) {
@@ -1245,6 +1257,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function buildWorksheetXml(data) {
     const rows = [];
+    const mergedCells = ["A6:G6"];
     const locationColumnWidth = worksheetTightColumnWidth([
       "Detail Lokasi",
       ...data.pulls.map((pull) => pull.location),
@@ -1291,11 +1304,19 @@ document.addEventListener("DOMContentLoaded", () => {
     rowNumber = appendItemSection(rows, rowNumber, "C. MATERIAL", data.materials);
     rowNumber += 1;
     rowNumber = appendItemSection(rows, rowNumber, "D. PEKERJAAN TAMBAHAN", data.extras);
+    rowNumber += 1;
+    rowNumber = appendRemarkSection(rows, rowNumber, data.remarks, mergedCells);
 
     const lastRow = rowNumber - 1;
+    const mergedCellsXml = mergedCells.map((ref) => `<mergeCell ref="${ref}"/>`).join("");
 
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    const worksheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac xr xr2 xr3" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xmlns:xr2="http://schemas.microsoft.com/office/spreadsheetml/2015/revision2" xmlns:xr3="http://schemas.microsoft.com/office/spreadsheetml/2016/revision3" xr:uid="{00000000-0001-0000-0000-000000000000}"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A6:G${lastRow}"/><sheetViews><sheetView tabSelected="1" zoomScale="120" zoomScaleNormal="120" workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews><sheetFormatPr baseColWidth="10" defaultColWidth="8.83203125" defaultRowHeight="14" x14ac:dyDescent="0.15"/><cols><col min="1" max="1" width="6" style="12" customWidth="1"/><col min="2" max="2" width="22.33203125" style="12" customWidth="1"/><col min="3" max="4" width="10" style="12" customWidth="1"/><col min="5" max="5" width="${itemNoteColumnWidth}" style="12" customWidth="1"/><col min="6" max="6" width="${locationColumnWidth}" style="12" customWidth="1"/><col min="7" max="7" width="${noteColumnWidth}" style="12" customWidth="1"/><col min="8" max="16384" width="8.83203125" style="12"/></cols><sheetData>${rows.join("")}</sheetData><mergeCells count="1"><mergeCell ref="A6:G6"/></mergeCells><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/><pageSetup scale="85" orientation="portrait" horizontalDpi="4294967295" verticalDpi="4294967295"/><drawing r:id="rId1"/></worksheet>`;
+
+    return worksheetXml.replace(
+      '<mergeCells count="1"><mergeCell ref="A6:G6"/></mergeCells>',
+      `<mergeCells count="${mergedCells.length}">${mergedCellsXml}</mergeCells>`
+    );
   }
 
   function appendPullSection(rows, rowNumber, pulls) {
@@ -1356,6 +1377,40 @@ document.addEventListener("DOMContentLoaded", () => {
         cell(`F${rowNumber}`, 11, ""),
         cell(`G${rowNumber}`, 11, ""),
       ], { height: rowHeightForTextValues(item.description, item.note) }));
+      rowNumber += 1;
+    });
+
+    return rowNumber;
+  }
+
+  function appendRemarkSection(rows, rowNumber, remarks, mergedCells) {
+    rows.push(rowXml(rowNumber, [cell(`A${rowNumber}`, 4, "E. CATATAN")]));
+    rowNumber += 1;
+    rows.push(rowXml(rowNumber, [cell(`A${rowNumber}`, 4, "")]));
+    rowNumber += 1;
+    rows.push(rowXml(rowNumber, [
+      cell(`A${rowNumber}`, 1, "No"),
+      cell(`B${rowNumber}`, 1, "Deskripsi"),
+      cell(`C${rowNumber}`, 1, ""),
+      cell(`D${rowNumber}`, 1, ""),
+      cell(`E${rowNumber}`, 1, ""),
+      cell(`F${rowNumber}`, 10, ""),
+      cell(`G${rowNumber}`, 10, ""),
+    ], { height: 15, customHeight: true }));
+    mergedCells.push(`B${rowNumber}:E${rowNumber}`);
+    rowNumber += 1;
+
+    remarks.forEach((remark, index) => {
+      rows.push(rowXml(rowNumber, [
+        cell(`A${rowNumber}`, 2, index + 1),
+        cell(`B${rowNumber}`, 3, remark.description),
+        cell(`C${rowNumber}`, 3, ""),
+        cell(`D${rowNumber}`, 3, ""),
+        cell(`E${rowNumber}`, 3, ""),
+        cell(`F${rowNumber}`, 11, ""),
+        cell(`G${rowNumber}`, 11, ""),
+      ], { height: rowHeightForTextValues(remark.description) }));
+      mergedCells.push(`B${rowNumber}:E${rowNumber}`);
       rowNumber += 1;
     });
 
@@ -1649,6 +1704,10 @@ document.addEventListener("DOMContentLoaded", () => {
       { label: "Satuan", width: 66.24, align: "center", key: "unit" },
       { label: "Catatan", width: 78, align: "left", key: "note", wrap: true },
     ],
+    remarkColumns: [
+      { label: "No", width: 34.04, align: "center", key: "no" },
+      { label: "Deskripsi", width: 333.76, align: "left", key: "description", wrap: true },
+    ],
   };
 
   function drawPdf(data, logoDataUrl) {
@@ -1688,7 +1747,9 @@ document.addEventListener("DOMContentLoaded", () => {
       + PDF_LAYOUT.table.sectionGap;
     nextY = drawItemPdfSection(doc, "C. MATERIAL", data.materials, nextY)
       + PDF_LAYOUT.table.sectionGap;
-    drawItemPdfSection(doc, "D. PEKERJAAN TAMBAHAN", data.extras, nextY);
+    nextY = drawItemPdfSection(doc, "D. PEKERJAAN TAMBAHAN", data.extras, nextY)
+      + PDF_LAYOUT.table.sectionGap;
+    drawRemarkPdfSection(doc, data.remarks, nextY);
     drawPdfPageNumbers(doc);
 
     return doc;
@@ -1767,6 +1828,19 @@ document.addEventListener("DOMContentLoaded", () => {
         qty: row.qty,
         unit: row.unit,
         note: row.note,
+      })),
+    });
+  }
+
+  function drawRemarkPdfSection(doc, remarks, topY) {
+    return drawPdfSection(doc, {
+      title: "E. CATATAN",
+      topY,
+      width: PDF_LAYOUT.itemTableWidth,
+      columns: PDF_LAYOUT.remarkColumns,
+      rows: remarks.map((row, index) => ({
+        no: index + 1,
+        description: row.description,
       })),
     });
   }

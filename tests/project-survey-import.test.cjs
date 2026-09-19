@@ -66,21 +66,22 @@ test("Excel item and remark columns use the requested spans", async () => {
 });
 
 test("Excel item note width follows the longest note content", async () => {
-  const columnGWidth = async (data) => {
+  const noteSpanWidth = async (data) => {
     const workbook = XLSX.read(await (await exportFile(data)).arrayBuffer(), {
       type: "array",
       cellStyles: true,
     });
-    return workbook.Sheets.Survey["!cols"][6].width;
+    const columns = workbook.Sheets.Survey["!cols"];
+    return Number((columns[5].width + columns[6].width).toFixed(2));
   };
   const shortNotes = fixture();
   const longNotes = fixture();
-  longNotes.materials[0].note = "x".repeat(300);
-  const shortWidth = await columnGWidth(shortNotes);
-  const longWidth = await columnGWidth(longNotes);
+  longNotes.materials[0].note = "Long material note for automatic column sizing";
+  const shortWidth = await noteSpanWidth(shortNotes);
+  const longWidth = await noteSpanWidth(longNotes);
 
   assert(longWidth > shortWidth);
-  assert.equal(longWidth, 255);
+  assert.equal(longWidth, longNotes.materials[0].note.length + 1);
 });
 
 test("PDF item and remark columns match the Excel column spans", () => {

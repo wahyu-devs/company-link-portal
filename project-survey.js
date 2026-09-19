@@ -1263,13 +1263,20 @@ document.addEventListener("DOMContentLoaded", () => {
       "Detail Lokasi",
       ...data.pulls.map((pull) => pull.location),
     ]);
-    const noteColumnWidth = worksheetTightColumnWidth([
+    const pullNoteColumnWidth = worksheetTightColumnWidth([
       "Catatan",
       ...data.pulls.map((pull) => pull.note),
+    ]);
+    const itemNoteSpanWidth = worksheetTightColumnWidth([
+      "Catatan",
       ...data.activeDevices.map((item) => item.note),
       ...data.materials.map((item) => item.note),
       ...data.extras.map((item) => item.note),
     ]);
+    const noteColumnWidth = Math.max(
+      pullNoteColumnWidth,
+      itemNoteSpanWidth - locationColumnWidth
+    );
     const itemNoteColumnWidth = 16;
     let rowNumber = 6;
 

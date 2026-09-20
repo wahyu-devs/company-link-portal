@@ -92,6 +92,19 @@ test("Excel embeds documentation photos and keeps their source data on a hidden 
   assert(binaryText.includes('name="Documentation 1"'));
   assert(binaryText.includes('<xdr:col>1</xdr:col>'));
   assert(binaryText.includes('<xdr:col>5</xdr:col>'));
+
+  const documentationMarker = binaryText.indexOf("PROJECT SURVEY DOCUMENTATION DATA");
+  const documentationWorksheetStart = binaryText.lastIndexOf("<worksheet ", documentationMarker);
+  const documentationWorksheetEnd = binaryText.indexOf("</worksheet>", documentationMarker);
+  const documentationWorksheetXml = binaryText.slice(
+    documentationWorksheetStart,
+    documentationWorksheetEnd + "</worksheet>".length
+  );
+  assert(documentationMarker > -1);
+  assert.match(
+    documentationWorksheetXml,
+    /xmlns:x14ac="http:\/\/schemas\.microsoft\.com\/office\/spreadsheetml\/2009\/9\/ac"/
+  );
 });
 
 test("documentation photos stay matched when earlier rows are blank", async () => {

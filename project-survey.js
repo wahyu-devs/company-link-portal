@@ -279,6 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function createPhotoField(value, rowIndex) {
     const field = document.createElement("div");
     field.className = "survey-photo-field";
+    field.dataset.photoField = "";
 
     const valueInput = document.createElement("input");
     valueInput.type = "hidden";
@@ -288,25 +289,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const preview = document.createElement("div");
     preview.className = "survey-photo-preview";
+    preview.dataset.photoDropzone = "";
     if (value) {
       const image = document.createElement("img");
       image.src = value;
       image.alt = `Foto dokumentasi ${rowIndex + 1}`;
       preview.appendChild(image);
     } else {
-      preview.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i><span>Belum ada foto</span>';
+      preview.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i><span>Belum ada foto</span><small class="survey-photo-drop-hint">Tarik foto ke sini</small>';
     }
 
     const mobileLabel = document.createElement("span");
     mobileLabel.className = "survey-mobile-field-label";
     mobileLabel.textContent = "Foto";
 
+    const statusId = `documentationPhotoStatus-${rowIndex}`;
     const actions = document.createElement("div");
     actions.className = "survey-photo-actions";
-    actions.append(
-      photoChoiceButton("camera", "bi-camera", "Ambil Dari Kamera"),
-      photoChoiceButton("gallery", "bi-images", "Ambil Dari Galeri")
-    );
+
+    const manageButton = document.createElement("button");
+    manageButton.type = "button";
+    manageButton.className = "survey-photo-manage";
+    manageButton.dataset.photoToggle = "";
+    manageButton.dataset.photoDefaultLabel = value ? "Ganti Foto" : "Tambah Foto";
+    manageButton.setAttribute("aria-expanded", "false");
+    manageButton.setAttribute("aria-controls", `documentationPhotoChoices-${rowIndex}`);
+    manageButton.setAttribute("aria-describedby", statusId);
+    manageButton.innerHTML = value
+      ? '<i class="bi bi-arrow-repeat" aria-hidden="true"></i><span>Ganti Foto</span>'
+      : '<i class="bi bi-image" aria-hidden="true"></i><span>Tambah Foto</span>';
+    actions.appendChild(manageButton);
 
     if (value) {
       const clearButton = document.createElement("button");
@@ -317,8 +329,26 @@ document.addEventListener("DOMContentLoaded", () => {
       actions.appendChild(clearButton);
     }
 
-    const cameraInput = photoFileInput("camera", true);
-    const galleryInput = photoFileInput("gallery", false);
+    const choices = document.createElement("div");
+    choices.id = `documentationPhotoChoices-${rowIndex}`;
+    choices.className = "survey-photo-source-options";
+    choices.hidden = true;
+    choices.append(
+      photoChoiceButton("camera", "bi-camera", "Ambil Dari Kamera"),
+      photoChoiceButton("gallery", "bi-images", "Pilih Dari Galeri")
+    );
+    actions.appendChild(choices);
+
+    const status = document.createElement("p");
+    status.id = statusId;
+    status.className = "survey-photo-status";
+    status.dataset.photoStatus = "";
+    status.setAttribute("aria-live", "polite");
+    status.textContent = "Maks. 20 MB · Foto akan dikompresi";
+    actions.appendChild(status);
+
+    const cameraInput = photoFileInput("camera", true, statusId);
+    const galleryInput = photoFileInput("gallery", false, statusId);
     field.append(valueInput, mobileLabel, preview, actions, cameraInput, galleryInput);
     return field;
   }
@@ -332,13 +362,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return button;
   }
 
-  function photoFileInput(source, capture) {
+  function photoFileInput(source, capture, statusId) {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
     input.className = "survey-photo-file";
     input.dataset.photoInput = source;
-    input.setAttribute("aria-label", source === "camera" ? "Ambil Dari Kamera" : "Ambil Dari Galeri");
+    input.setAttribute("aria-describedby", statusId);
+    input.setAttribute("aria-label", source === "camera" ? "Ambil Dari Kamera" : "Pilih Dari Galeri");
     if (capture) input.setAttribute("capture", "environment");
     return input;
   }
@@ -379,14 +410,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  async function updateDocumentationPhoto(fileInput) {
-    const file = fileInput.files?.[0];
+  async function updateDocumentationPhoto(file, rowElement, fileInput = null) {
     if (!file) return;
-    const rowElement = fileInput.closest(".survey-row");
     const rowIndex = Number(rowElement?.dataset.rowIndex);
-    const buttons = rowElement?.querySelectorAll("button") ?? [];
+    const field = rowElement?.querySelector("[data-photo-field]");
+    const status = field?.querySelector("[data-photo-status]");
+    const buttons = field?.querySelectorAll("button") ?? [];
     buttons.forEach((button) => { button.disabled = true; });
-    setStatus("Memproses foto dokumentasi...", "info");
+    field?.classList.add("is-processing");
+    field?.setAttribute("aria-busy", "true");
+    setDocumentationPhotoStatus(status, "Memproses foto...", "info");
 
     try {
       const photo = await prepareDocumentationPhoto(file);
@@ -397,10 +430,22 @@ document.addEventListener("DOMContentLoaded", () => {
       updateUnsavedProtection();
       setStatus("Foto dokumentasi berhasil ditambahkan.", "success");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Foto belum bisa ditambahkan.", "danger");
+      const message = error instanceof Error ? error.message : "Foto belum bisa ditambahkan.";
+      setDocumentationPhotoStatus(status, message, "danger");
+      setStatus(message, "danger");
+    } finally {
       buttons.forEach((button) => { button.disabled = false; });
-      fileInput.value = "";
+      field?.classList.remove("is-processing");
+      field?.removeAttribute("aria-busy");
+      if (fileInput) fileInput.value = "";
     }
+  }
+
+  function setDocumentationPhotoStatus(element, message, variant = "") {
+    if (!element) return;
+    element.textContent = message;
+    element.classList.toggle("survey-photo-status-info", variant === "info");
+    element.classList.toggle("survey-photo-status-danger", variant === "danger");
   }
 
   function createRowControl(column, row = {}) {
@@ -2846,6 +2891,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   sectionConfig.documentation.target.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
+    const toggleButton = target?.closest("[data-photo-toggle]");
+    if (toggleButton) {
+      const field = toggleButton.closest("[data-photo-field]");
+      const choices = field?.querySelector(".survey-photo-source-options");
+      if (!choices) return;
+      const willOpen = choices.hidden;
+      choices.hidden = !willOpen;
+      toggleButton.setAttribute("aria-expanded", String(willOpen));
+      const label = toggleButton.querySelector("span");
+      if (label) label.textContent = willOpen ? "Batal" : toggleButton.dataset.photoDefaultLabel;
+      if (willOpen) choices.querySelector("button")?.focus();
+      return;
+    }
+
     const sourceButton = target?.closest("[data-photo-source]");
     if (sourceButton) {
       sourceButton.closest(".survey-photo-field")
@@ -2869,7 +2928,47 @@ document.addEventListener("DOMContentLoaded", () => {
     const fileInput = event.target instanceof HTMLInputElement
       ? event.target.closest("[data-photo-input]")
       : null;
-    if (fileInput) updateDocumentationPhoto(fileInput);
+    if (fileInput) {
+      updateDocumentationPhoto(fileInput.files?.[0], fileInput.closest(".survey-row"), fileInput);
+    }
+  });
+
+  sectionConfig.documentation.target.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const field = event.target instanceof Element ? event.target.closest("[data-photo-field]") : null;
+    const choices = field?.querySelector(".survey-photo-source-options");
+    const toggleButton = field?.querySelector("[data-photo-toggle]");
+    if (!choices || choices.hidden || !toggleButton) return;
+    choices.hidden = true;
+    toggleButton.setAttribute("aria-expanded", "false");
+    const label = toggleButton.querySelector("span");
+    if (label) label.textContent = toggleButton.dataset.photoDefaultLabel;
+    toggleButton.focus();
+  });
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    sectionConfig.documentation.target.addEventListener(eventName, (event) => {
+      const field = event.target instanceof Element ? event.target.closest("[data-photo-field]") : null;
+      if (!field || !Array.from(event.dataTransfer?.types || []).includes("Files")) return;
+      event.preventDefault();
+      field.classList.add("is-dragging");
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    });
+  });
+
+  sectionConfig.documentation.target.addEventListener("dragleave", (event) => {
+    const field = event.target instanceof Element ? event.target.closest("[data-photo-field]") : null;
+    if (!field || field.contains(event.relatedTarget)) return;
+    field.classList.remove("is-dragging");
+  });
+
+  sectionConfig.documentation.target.addEventListener("drop", (event) => {
+    const field = event.target instanceof Element ? event.target.closest("[data-photo-field]") : null;
+    if (!field) return;
+    event.preventDefault();
+    field.classList.remove("is-dragging");
+    const file = event.dataTransfer?.files?.[0];
+    if (file) updateDocumentationPhoto(file, field.closest(".survey-row"));
   });
 
   document.querySelectorAll("[data-add-row]").forEach((button) => {

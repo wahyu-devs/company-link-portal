@@ -127,15 +127,15 @@ async function main() {
           fits: table.scrollWidth <= table.clientWidth + 1,
           photoWidth: photo.width,
           descriptionWidth: description.width,
-          heights: [photo.height, number.height, description.height, action.height],
+          photoHeight: photo.height,
+          compactHeights: [number.height, description.height, action.height],
         };
       });
       assert.equal(documentationLayout.fits, true);
       assert(documentationLayout.photoWidth >= 330);
       assert(documentationLayout.descriptionWidth >= 190);
-      assert(documentationLayout.heights.every((height) => (
-        Math.abs(height - documentationLayout.heights[0]) <= 1
-      )));
+      assert(documentationLayout.compactHeights.every((height) => Math.abs(height - 44) <= 1));
+      assert(documentationLayout.photoHeight > documentationLayout.compactHeights[0]);
       assert.equal(
         await page.locator('#documentationRows [data-field="description"]').first().getAttribute("placeholder"),
         "Deskripsi foto"
@@ -190,11 +190,31 @@ async function main() {
     await check("documentation camera and gallery choices persist photos", async ({ page, dirty, saved, load }) => {
       await load();
       const photoField = page.locator("#documentationRows .survey-photo-field").first();
+      assert.equal(await photoField.locator("[data-photo-toggle] span").textContent(), "Ganti Foto");
+      assert.equal(await photoField.locator("[data-clear-photo] span").textContent(), "Hapus Foto");
+      assert(await photoField.locator(".survey-photo-source-options").isHidden());
+      assert.match(await photoField.locator("[data-photo-status]").textContent(), /20 MB/);
+
+      await photoField.locator("[data-photo-toggle]").click();
+      assert(await photoField.locator(".survey-photo-source-options").isVisible());
+      assert.equal(await photoField.locator("[data-photo-toggle] span").textContent(), "Batal");
       assert.equal(await photoField.locator('[data-photo-source="camera"] span').textContent(), "Ambil Dari Kamera");
-      assert.equal(await photoField.locator('[data-photo-source="gallery"] span').textContent(), "Ambil Dari Galeri");
+      assert.equal(await photoField.locator('[data-photo-source="gallery"] span').textContent(), "Pilih Dari Galeri");
+      assert.equal(await page.evaluate(() => document.activeElement?.dataset.photoSource), "camera");
+      await page.keyboard.press("Escape");
+      assert(await photoField.locator(".survey-photo-source-options").isHidden());
+      assert.equal(await photoField.locator("[data-photo-toggle] span").textContent(), "Ganti Foto");
+      assert.equal(await page.evaluate(() => document.activeElement?.dataset.photoToggle !== undefined), true);
+      await photoField.locator("[data-photo-toggle]").click();
       assert.equal(await photoField.locator('[data-photo-input="camera"]').getAttribute("capture"), "environment");
       assert.equal(await photoField.locator('[data-photo-input="gallery"]').getAttribute("capture"), null);
       assert.equal(await photoField.locator(".survey-photo-preview img").count(), 1);
+
+      await photoField.locator('[data-photo-input="gallery"]').setInputFiles({
+        name: "not-a-photo.txt", mimeType: "text/plain", buffer: Buffer.from("not a photo"),
+      });
+      await page.waitForFunction(() => document.querySelector("[data-photo-status]")?.textContent.includes("valid"));
+      assert.match(await photoField.locator("[data-photo-status]").textContent(), /valid/);
 
       await photoField.locator('[data-photo-input="gallery"]').setInputFiles(
         path.join(root, "assets/images/project-survey-logo.png")
@@ -208,10 +228,26 @@ async function main() {
         .data.documentation[0].photo.startsWith("data:image/jpeg;base64,"));
 
       await photoField.locator("[data-clear-photo]").click();
+      assert.equal(await photoField.locator("[data-photo-toggle] span").textContent(), "Tambah Foto");
+      assert.equal(await photoField.locator("[data-clear-photo]").count(), 0);
       await dirty(true);
       await page.locator("#saveSurvey").click();
       assert.match(await page.locator("#surveyToast").textContent(), /Foto wajib diisi/);
       await dirty(true);
+
+      const imageBase64 = (await fs.readFile(
+        path.join(root, "assets/images/project-survey-logo.png")
+      )).toString("base64");
+      const dataTransfer = await page.evaluateHandle((base64) => {
+        const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([bytes], "dropped-photo.png", { type: "image/png" }));
+        return transfer;
+      }, imageBase64);
+      await photoField.locator("[data-photo-dropzone]").dispatchEvent("drop", { dataTransfer });
+      await page.waitForFunction(() => document.querySelector('#documentationRows [data-field="photo"]')
+        ?.value.startsWith("data:image/jpeg;base64,"));
+      assert.equal(await photoField.locator(".survey-photo-preview img").count(), 1);
     });
 
     await check("New: Cancel, keyboard focus, Discard, and Save & Continue", async ({ page, dirty, saved, modal, choose, load }) => {

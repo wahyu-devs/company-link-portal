@@ -205,27 +205,18 @@ async function main() {
     await check("documentation camera and gallery choices persist photos", async ({ page, dirty, saved, load }) => {
       await load();
       const photoField = page.locator("#documentationRows .survey-photo-field").first();
-      assert.equal(await photoField.locator("[data-photo-toggle]").getAttribute("aria-label"), "Ganti Foto");
+      assert.equal(await photoField.locator("[data-photo-toggle]").count(), 0);
       assert.equal(await photoField.locator("[data-clear-photo]").count(), 0);
       assert.equal(
         await page.locator('#documentationRows [data-remove-row="documentation"]').getAttribute("aria-label"),
         "Hapus Dokumentasi 1"
       );
       assert.equal(await photoField.locator("button span").count(), 0);
-      assert(await photoField.locator(".survey-photo-source-options").isHidden());
       assert.equal(await photoField.locator("[data-photo-status]").textContent(), "");
-
-      await photoField.locator("[data-photo-toggle]").click();
-      assert(await photoField.locator(".survey-photo-source-options").isVisible());
-      assert.equal(await photoField.locator("[data-photo-toggle]").getAttribute("aria-label"), "Batal");
       assert.equal(await photoField.locator('[data-photo-source="camera"]').getAttribute("aria-label"), "Ambil Dari Kamera");
       assert.equal(await photoField.locator('[data-photo-source="gallery"]').getAttribute("aria-label"), "Pilih Dari Galeri");
-      assert.equal(await page.evaluate(() => document.activeElement?.dataset.photoSource), "camera");
-      await page.keyboard.press("Escape");
-      assert(await photoField.locator(".survey-photo-source-options").isHidden());
-      assert.equal(await photoField.locator("[data-photo-toggle]").getAttribute("aria-label"), "Ganti Foto");
-      assert.equal(await page.evaluate(() => document.activeElement?.dataset.photoToggle !== undefined), true);
-      await photoField.locator("[data-photo-toggle]").click();
+      assert(await photoField.locator('[data-photo-source="camera"]').isVisible());
+      assert(await photoField.locator('[data-photo-source="gallery"]').isVisible());
       assert.equal(await photoField.locator('[data-photo-input="camera"]').getAttribute("capture"), "environment");
       assert.equal(await photoField.locator('[data-photo-input="gallery"]').getAttribute("capture"), null);
       assert.equal(await photoField.locator(".survey-photo-preview img").count(), 1);
@@ -235,9 +226,6 @@ async function main() {
       });
       await page.waitForFunction(() => document.querySelector("[data-photo-status]")?.textContent.includes("valid"));
       assert.match(await photoField.locator("[data-photo-status]").textContent(), /valid/);
-      await photoField.locator("[data-photo-toggle]").click();
-      assert.equal(await photoField.locator("[data-photo-status]").textContent(), "");
-      assert(await photoField.locator(".survey-photo-source-options").isVisible());
 
       await photoField.locator('[data-photo-input="gallery"]').setInputFiles(
         path.join(root, "assets/images/project-survey-logo.png")
@@ -251,14 +239,8 @@ async function main() {
         .data.documentation[0].photo.startsWith("data:image/jpeg;base64,"));
 
       await page.locator('#documentationRows [data-remove-row="documentation"]').click();
-      assert.equal(await photoField.locator("[data-photo-toggle]").getAttribute("aria-label"), "Tambah Foto");
-      assert.equal(await photoField.locator(".survey-photo-add-icon").count(), 1);
-      assert.equal(await photoField.locator(".survey-photo-add-icon").getAttribute("viewBox"), "0 0 24 24");
-      await photoField.locator("[data-photo-toggle]").click();
-      assert.equal(await photoField.locator(".survey-photo-add-icon").count(), 0);
-      assert(await photoField.locator("[data-photo-toggle] i").evaluate((icon) => icon.classList.contains("bi-x-lg")));
-      await photoField.locator("[data-photo-toggle]").click();
-      assert.equal(await photoField.locator(".survey-photo-add-icon").count(), 1);
+      assert(await photoField.locator('[data-photo-source="camera"]').isVisible());
+      assert(await photoField.locator('[data-photo-source="gallery"]').isVisible());
       await dirty(true);
       await page.locator("#saveSurvey").click();
       assert.match(await page.locator("#surveyToast").textContent(), /berhasil diperbarui/);

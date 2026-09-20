@@ -309,29 +309,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const actions = document.createElement("div");
     actions.className = "survey-photo-actions";
 
-    const manageButton = document.createElement("button");
-    manageButton.type = "button";
-    manageButton.className = "survey-photo-manage";
-    manageButton.dataset.photoToggle = "";
-    manageButton.dataset.photoDefaultLabel = value ? "Ganti Foto" : "Tambah Foto";
-    manageButton.dataset.photoDefaultIcon = value ? "bi-arrow-repeat" : "photo-add";
-    manageButton.setAttribute("aria-expanded", "false");
-    manageButton.setAttribute("aria-controls", `documentationPhotoChoices-${rowIndex}`);
-    manageButton.setAttribute("aria-describedby", statusId);
-    manageButton.setAttribute("aria-label", manageButton.dataset.photoDefaultLabel);
-    manageButton.title = manageButton.dataset.photoDefaultLabel;
-    manageButton.innerHTML = photoManageIconMarkup(manageButton.dataset.photoDefaultIcon);
-    actions.appendChild(manageButton);
-
-    const choices = document.createElement("div");
-    choices.id = `documentationPhotoChoices-${rowIndex}`;
-    choices.className = "survey-photo-source-options";
-    choices.hidden = true;
-    choices.append(
-      photoChoiceButton("camera", "bi-camera", "Ambil Dari Kamera"),
-      photoChoiceButton("gallery", "bi-images", "Pilih Dari Galeri")
+    actions.append(
+      photoChoiceButton("camera", "bi-camera", "Ambil Dari Kamera", statusId),
+      photoChoiceButton("gallery", "bi-images", "Pilih Dari Galeri", statusId)
     );
-    actions.appendChild(choices);
 
     const status = document.createElement("p");
     status.id = statusId;
@@ -346,39 +327,16 @@ document.addEventListener("DOMContentLoaded", () => {
     return field;
   }
 
-  function photoChoiceButton(source, icon, label) {
+  function photoChoiceButton(source, icon, label, statusId) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "survey-photo-choice";
     button.dataset.photoSource = source;
     button.setAttribute("aria-label", label);
+    button.setAttribute("aria-describedby", statusId);
     button.title = label;
     button.innerHTML = `<i class="bi ${icon}" aria-hidden="true"></i>`;
     return button;
-  }
-
-  function photoManageIconMarkup(icon) {
-    if (icon === "photo-add") {
-      return [
-        '<svg class="survey-photo-add-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">',
-        '<path d="M21 19V5a2 2 0 0 0-2-2h-7v2h7v14H5v-7H3v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2ZM8.5 13.5 11 16.51 14.5 12l4.5 6H6l2.5-4.5ZM5 11h2V7h4V5H7V1H5v4H1v2h4v4Z" fill="currentColor"/>',
-        "</svg>",
-      ].join("");
-    }
-    return `<i class="bi ${icon}" aria-hidden="true"></i>`;
-  }
-
-  function setPhotoSourceOptions(field, open) {
-    const choices = field?.querySelector(".survey-photo-source-options");
-    const toggleButton = field?.querySelector("[data-photo-toggle]");
-    if (!choices || !toggleButton) return;
-    if (open) setDocumentationPhotoStatus(field.querySelector("[data-photo-status]"), "");
-    choices.hidden = !open;
-    toggleButton.setAttribute("aria-expanded", String(open));
-    const label = open ? "Batal" : toggleButton.dataset.photoDefaultLabel;
-    toggleButton.setAttribute("aria-label", label);
-    toggleButton.title = label;
-    toggleButton.innerHTML = photoManageIconMarkup(open ? "bi-x-lg" : toggleButton.dataset.photoDefaultIcon);
   }
 
   function photoFileInput(source, capture, statusId) {
@@ -435,7 +393,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const field = rowElement?.querySelector("[data-photo-field]");
     const status = field?.querySelector("[data-photo-status]");
     const buttons = field?.querySelectorAll("button") ?? [];
-    setPhotoSourceOptions(field, false);
     buttons.forEach((button) => { button.disabled = true; });
     field?.classList.add("is-processing");
     field?.setAttribute("aria-busy", "true");
@@ -2911,17 +2868,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   sectionConfig.documentation.target.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
-    const toggleButton = target?.closest("[data-photo-toggle]");
-    if (toggleButton) {
-      const field = toggleButton.closest("[data-photo-field]");
-      const choices = field?.querySelector(".survey-photo-source-options");
-      if (!choices) return;
-      const willOpen = choices.hidden;
-      setPhotoSourceOptions(field, willOpen);
-      if (willOpen) choices.querySelector("button")?.focus();
-      return;
-    }
-
     const sourceButton = target?.closest("[data-photo-source]");
     if (sourceButton) {
       sourceButton.closest(".survey-photo-field")
@@ -2938,16 +2884,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (fileInput) {
       updateDocumentationPhoto(fileInput.files?.[0], fileInput.closest(".survey-row"), fileInput);
     }
-  });
-
-  sectionConfig.documentation.target.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape") return;
-    const field = event.target instanceof Element ? event.target.closest("[data-photo-field]") : null;
-    const choices = field?.querySelector(".survey-photo-source-options");
-    const toggleButton = field?.querySelector("[data-photo-toggle]");
-    if (!choices || choices.hidden || !toggleButton) return;
-    setPhotoSourceOptions(field, false);
-    toggleButton.focus();
   });
 
   ["dragenter", "dragover"].forEach((eventName) => {

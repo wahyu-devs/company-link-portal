@@ -1116,7 +1116,6 @@ body.survey-page {
   gap: 6px;
 }
 
-.survey-photo-manage,
 .survey-photo-choice {
   width: 44px;
   height: 44px;
@@ -1136,40 +1135,14 @@ body.survey-page {
   cursor: pointer;
 }
 
-.survey-photo-manage i,
 .survey-photo-choice i {
   font-size: 16px;
 }
 
-.survey-photo-add-icon {
-  width: 22px;
-  height: 22px;
-  display: block;
-}
-
-.survey-photo-manage {
-  border-color: var(--border-strong);
-  background: var(--control-hover);
-  color: var(--text);
-}
-
-.survey-photo-manage:hover,
 .survey-photo-choice:hover {
   border-color: var(--border-strong);
   background: var(--control-hover);
   color: var(--text);
-}
-
-.survey-photo-source-options {
-  position: absolute;
-  top: 50px;
-  right: 0;
-  display: flex;
-  gap: 6px;
-}
-
-.survey-photo-source-options[hidden] {
-  display: none;
 }
 
 .survey-photo-status {
@@ -1209,13 +1182,11 @@ body.survey-page {
   opacity: 0.45;
 }
 
-.survey-photo-manage:focus-visible,
 .survey-photo-choice:focus-visible {
   outline: none;
   box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
-.survey-photo-manage:disabled,
 .survey-photo-choice:disabled {
   cursor: wait;
   opacity: 0.55;

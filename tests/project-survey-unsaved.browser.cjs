@@ -118,7 +118,9 @@ async function main() {
         const row = table.querySelector(".survey-row:not(.survey-row-header)");
         const tableStyle = getComputedStyle(table);
         const rowStyle = getComputedStyle(row);
+        const card = row.getBoundingClientRect();
         const photo = row.querySelector(".survey-photo-field").getBoundingClientRect();
+        const preview = row.querySelector(".survey-photo-preview").getBoundingClientRect();
         const number = row.querySelector(".survey-row-number").getBoundingClientRect();
         const description = row.querySelector('[data-field="description"]').getBoundingClientRect();
         const action = row.querySelector(".survey-remove-row").getBoundingClientRect();
@@ -129,6 +131,12 @@ async function main() {
           cardBackground: rowStyle.backgroundColor,
           photoWidth: photo.width,
           descriptionWidth: description.width,
+          photoFillsCard: Math.abs(photo.left - card.left) <= 1 && Math.abs(photo.right - card.right) <= 1,
+          overlaysPhoto: [number, action].every((control) => (
+            control.top >= preview.top && control.bottom <= preview.bottom
+          )),
+          descriptionBelowPhoto: description.top >= preview.bottom,
+          objectFit: getComputedStyle(row.querySelector(".survey-photo-preview img")).objectFit,
           compactHeights: [number.height, description.height, action.height],
         };
       });
@@ -138,6 +146,10 @@ async function main() {
       assert.notEqual(documentationLayout.cardBackground, "rgba(0, 0, 0, 0)");
       assert(documentationLayout.photoWidth >= 300);
       assert(documentationLayout.descriptionWidth >= 300);
+      assert.equal(documentationLayout.photoFillsCard, true);
+      assert.equal(documentationLayout.overlaysPhoto, true);
+      assert.equal(documentationLayout.descriptionBelowPhoto, true);
+      assert.equal(documentationLayout.objectFit, "cover");
       assert(documentationLayout.compactHeights.every((height) => Math.abs(height - 44) <= 1));
       assert.equal(
         await page.locator('#documentationRows [data-field="description"]').first().getAttribute("placeholder"),
@@ -193,20 +205,21 @@ async function main() {
     await check("documentation camera and gallery choices persist photos", async ({ page, dirty, saved, load }) => {
       await load();
       const photoField = page.locator("#documentationRows .survey-photo-field").first();
-      assert.equal(await photoField.locator("[data-photo-toggle] span").textContent(), "Ganti Foto");
-      assert.equal(await photoField.locator("[data-clear-photo] span").textContent(), "Hapus Foto");
+      assert.equal(await photoField.locator("[data-photo-toggle]").getAttribute("aria-label"), "Ganti Foto");
+      assert.equal(await photoField.locator("[data-clear-photo]").getAttribute("aria-label"), "Hapus Foto");
+      assert.equal(await photoField.locator("button span").count(), 0);
       assert(await photoField.locator(".survey-photo-source-options").isHidden());
-      assert.match(await photoField.locator("[data-photo-status]").textContent(), /20 MB/);
+      assert.equal(await photoField.locator("[data-photo-status]").textContent(), "");
 
       await photoField.locator("[data-photo-toggle]").click();
       assert(await photoField.locator(".survey-photo-source-options").isVisible());
-      assert.equal(await photoField.locator("[data-photo-toggle] span").textContent(), "Batal");
-      assert.equal(await photoField.locator('[data-photo-source="camera"] span').textContent(), "Ambil Dari Kamera");
-      assert.equal(await photoField.locator('[data-photo-source="gallery"] span').textContent(), "Pilih Dari Galeri");
+      assert.equal(await photoField.locator("[data-photo-toggle]").getAttribute("aria-label"), "Batal");
+      assert.equal(await photoField.locator('[data-photo-source="camera"]').getAttribute("aria-label"), "Ambil Dari Kamera");
+      assert.equal(await photoField.locator('[data-photo-source="gallery"]').getAttribute("aria-label"), "Pilih Dari Galeri");
       assert.equal(await page.evaluate(() => document.activeElement?.dataset.photoSource), "camera");
       await page.keyboard.press("Escape");
       assert(await photoField.locator(".survey-photo-source-options").isHidden());
-      assert.equal(await photoField.locator("[data-photo-toggle] span").textContent(), "Ganti Foto");
+      assert.equal(await photoField.locator("[data-photo-toggle]").getAttribute("aria-label"), "Ganti Foto");
       assert.equal(await page.evaluate(() => document.activeElement?.dataset.photoToggle !== undefined), true);
       await photoField.locator("[data-photo-toggle]").click();
       assert.equal(await photoField.locator('[data-photo-input="camera"]').getAttribute("capture"), "environment");
@@ -218,6 +231,9 @@ async function main() {
       });
       await page.waitForFunction(() => document.querySelector("[data-photo-status]")?.textContent.includes("valid"));
       assert.match(await photoField.locator("[data-photo-status]").textContent(), /valid/);
+      await photoField.locator("[data-photo-toggle]").click();
+      assert.equal(await photoField.locator("[data-photo-status]").textContent(), "");
+      assert(await photoField.locator(".survey-photo-source-options").isVisible());
 
       await photoField.locator('[data-photo-input="gallery"]').setInputFiles(
         path.join(root, "assets/images/project-survey-logo.png")
@@ -231,7 +247,7 @@ async function main() {
         .data.documentation[0].photo.startsWith("data:image/jpeg;base64,"));
 
       await photoField.locator("[data-clear-photo]").click();
-      assert.equal(await photoField.locator("[data-photo-toggle] span").textContent(), "Tambah Foto");
+      assert.equal(await photoField.locator("[data-photo-toggle]").getAttribute("aria-label"), "Tambah Foto");
       assert.equal(await photoField.locator("[data-clear-photo]").count(), 0);
       await dirty(true);
       await page.locator("#saveSurvey").click();
@@ -472,8 +488,8 @@ async function main() {
       assert.equal(documentationLayout.columns, 1);
       assert.equal(await page.locator("#documentationRows .survey-row-header").count(), 0);
       assert.deepEqual(
-        await page.locator("#documentationRows .survey-mobile-field-label").first().allTextContents(),
-        ["Foto"]
+        await page.locator("#documentationRows .survey-mobile-field-label").allTextContents(),
+        ["Deskripsi"]
       );
       await page.locator("#resetSurvey").click();
       await choose("cancel");

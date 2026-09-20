@@ -1013,19 +1013,28 @@ body.survey-page {
 }
 
 .survey-table-documentation .survey-row:not(.survey-row-header) {
-  grid-template-columns: 42px minmax(0, 1fr) 44px;
+  position: relative;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "number photo action"
-    ". description .";
+    "photo"
+    "description";
   align-items: start;
-  padding: 10px;
+  gap: 0;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface-soft);
+  overflow: hidden;
 }
 
 .survey-table-documentation .survey-row-number {
-  grid-area: number;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  width: 44px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .survey-table-documentation .survey-photo-field {
@@ -1034,10 +1043,16 @@ body.survey-page {
 
 .survey-table-documentation .survey-row-field {
   grid-area: description;
+  padding: 10px;
 }
 
 .survey-table-documentation .survey-remove-row {
-  grid-area: action;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .survey-mobile-field-label {
@@ -1050,20 +1065,19 @@ body.survey-page {
 }
 
 .survey-photo-field {
+  position: relative;
   min-width: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
 }
 
 .survey-photo-preview {
   position: relative;
   min-width: 0;
   aspect-ratio: 16 / 10;
-  max-height: 210px;
-  border: 1px dashed var(--border-strong);
-  border-radius: calc(var(--radius-sm) - 2px);
+  max-height: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   display: grid;
   place-items: center;
   align-content: center;
@@ -1087,21 +1101,28 @@ body.survey-page {
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .survey-photo-actions {
+  position: absolute;
+  top: 10px;
+  right: 62px;
+  z-index: 3;
   min-width: 0;
-  display: grid;
-  align-content: start;
-  gap: 7px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .survey-photo-manage,
 .survey-photo-choice,
 .survey-photo-clear {
+  width: 44px;
+  height: 44px;
   min-height: 44px;
-  padding: 8px 10px;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: calc(var(--radius-sm) - 2px);
   display: inline-flex;
@@ -1112,7 +1133,14 @@ body.survey-page {
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 700;
+  box-shadow: var(--shadow-soft);
   cursor: pointer;
+}
+
+.survey-photo-manage i,
+.survey-photo-choice i,
+.survey-photo-clear i {
+  font-size: 16px;
 }
 
 .survey-photo-manage {
@@ -1135,8 +1163,11 @@ body.survey-page {
 }
 
 .survey-photo-source-options {
-  display: grid;
-  gap: 7px;
+  position: absolute;
+  top: 50px;
+  right: 0;
+  display: flex;
+  gap: 6px;
 }
 
 .survey-photo-source-options[hidden] {
@@ -1144,10 +1175,23 @@ body.survey-page {
 }
 
 .survey-photo-status {
-  margin: 2px 2px 0;
-  color: var(--text-soft);
+  position: absolute;
+  top: 50px;
+  right: 0;
+  width: 210px;
+  margin: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  color: var(--text-muted);
   font-size: 11px;
   line-height: 1.4;
+}
+
+.survey-photo-status:empty {
+  display: none;
 }
 
 .survey-photo-status-info {
@@ -1159,9 +1203,8 @@ body.survey-page {
 }
 
 .survey-photo-field.is-dragging {
-  border-color: var(--text-muted);
   background: var(--control-hover);
-  box-shadow: 0 0 0 4px var(--focus-ring);
+  box-shadow: inset 0 0 0 4px var(--focus-ring);
 }
 
 .survey-photo-field.is-processing .survey-photo-preview img {
@@ -1563,23 +1606,7 @@ body.survey-page {
   }
 
   .survey-table-documentation .survey-row:not(.survey-row-header) {
-    grid-template-columns: 42px minmax(0, 1fr) 44px;
-    grid-template-areas:
-      "number . action"
-      "photo photo photo"
-      "description description description";
     align-content: start;
-    padding: 12px;
-  }
-
-  .survey-table-documentation .survey-row-number,
-  .survey-table-documentation .survey-remove-row {
-    height: 44px;
-    align-self: start;
-  }
-
-  .survey-photo-field {
-    padding: 0;
   }
 
   .survey-photo-preview {
@@ -1616,21 +1643,6 @@ body.survey-page {
 }
 
 @media (min-width: 1080px) {
-  .survey-photo-field {
-    grid-template-columns: minmax(180px, 1fr) minmax(150px, 170px);
-  }
-
-  .survey-photo-preview {
-    height: 150px;
-    max-height: none;
-    aspect-ratio: auto;
-  }
-
-  .survey-photo-actions {
-    grid-template-columns: minmax(0, 1fr);
-    align-content: center;
-  }
-
   .survey-actions {
     grid-template-columns:
       minmax(0, 0.75fr)

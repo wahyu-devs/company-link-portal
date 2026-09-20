@@ -121,7 +121,12 @@ document.addEventListener("DOMContentLoaded", () => {
       target: document.getElementById("documentationRows"),
       columns: [
         { key: "photo", label: "Foto", input: "photo" },
-        { key: "description", label: "Deskripsi", input: "text" },
+        {
+          key: "description",
+          label: "Deskripsi",
+          input: "text",
+          placeholder: "Deskripsi foto",
+        },
       ],
     },
   };
@@ -243,6 +248,14 @@ document.addEventListener("DOMContentLoaded", () => {
         input.dataset.section = sectionKey;
         input.dataset.field = column.key;
         input.setAttribute("aria-label", `${column.label} ${rowIndex + 1}`);
+        if (column.placeholder) input.placeholder = column.placeholder;
+
+        if (sectionKey === "documentation") {
+          const mobileLabel = document.createElement("span");
+          mobileLabel.className = "survey-mobile-field-label";
+          mobileLabel.textContent = column.label;
+          label.appendChild(mobileLabel);
+        }
 
         label.append(input);
         rowElement.appendChild(label);
@@ -284,6 +297,10 @@ document.addEventListener("DOMContentLoaded", () => {
       preview.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i><span>Belum ada foto</span>';
     }
 
+    const mobileLabel = document.createElement("span");
+    mobileLabel.className = "survey-mobile-field-label";
+    mobileLabel.textContent = "Foto";
+
     const actions = document.createElement("div");
     actions.className = "survey-photo-actions";
     actions.append(
@@ -302,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const cameraInput = photoFileInput("camera", true);
     const galleryInput = photoFileInput("gallery", false);
-    field.append(valueInput, preview, actions, cameraInput, galleryInput);
+    field.append(valueInput, mobileLabel, preview, actions, cameraInput, galleryInput);
     return field;
   }
 

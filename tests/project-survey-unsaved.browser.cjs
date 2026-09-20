@@ -117,6 +117,23 @@ async function main() {
         await page.locator("#documentationRows .survey-row-header span").allTextContents(),
         ["No", "Foto", "Deskripsi", "Aksi"]
       );
+      const documentationLayout = await page.locator("#documentationRows").evaluate((table) => {
+        const row = table.querySelector(".survey-row:not(.survey-row-header)");
+        const photo = row.querySelector(".survey-photo-field").getBoundingClientRect();
+        const description = row.querySelector(".survey-row-field").getBoundingClientRect();
+        return {
+          fits: table.scrollWidth <= table.clientWidth + 1,
+          photoWidth: photo.width,
+          descriptionWidth: description.width,
+        };
+      });
+      assert.equal(documentationLayout.fits, true);
+      assert(documentationLayout.photoWidth >= 330);
+      assert(documentationLayout.descriptionWidth >= 190);
+      assert.equal(
+        await page.locator('#documentationRows [data-field="description"]').first().getAttribute("placeholder"),
+        "Deskripsi foto"
+      );
       await dirty(false);
       for (const id of ["surveyorName", "customerName", "customerPic", "projectName", "surveyDate"]) {
         const field = page.locator("#" + id);
@@ -395,6 +412,23 @@ async function main() {
       await (await chooser).setFiles(payload);
       await waitForImport();
       await dirty(true);
+      const documentationLayout = await page.locator("#documentationRows").evaluate((table) => {
+        const row = table.querySelector(".survey-row:not(.survey-row-header)");
+        const tableRect = table.getBoundingClientRect();
+        const rowRect = row.getBoundingClientRect();
+        return {
+          fits: table.scrollWidth <= table.clientWidth + 1,
+          rowFits: rowRect.left >= tableRect.left - 1 && rowRect.right <= tableRect.right + 1,
+          headerDisplay: getComputedStyle(table.querySelector(".survey-row-header")).display,
+        };
+      });
+      assert.equal(documentationLayout.fits, true);
+      assert.equal(documentationLayout.rowFits, true);
+      assert.equal(documentationLayout.headerDisplay, "none");
+      assert.deepEqual(
+        await page.locator("#documentationRows .survey-mobile-field-label").first().allTextContents(),
+        ["Foto"]
+      );
       await page.locator("#resetSurvey").click();
       await choose("cancel");
       assert.equal(await page.locator("#projectName").inputValue(), fixture().projectName);

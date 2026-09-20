@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const LOGO_PATH = "assets/images/project-survey-logo.png";
   const encoder = new TextEncoder();
   let logoBase64Promise;
+  let heicConverterPromise;
   const pullTypeOptions = [
     "CCTV Indoor",
     "CCTV Outdoor",
@@ -342,7 +343,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function photoFileInput(source, capture, statusId) {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/*";
+    input.accept = "image/*,.heic,.heif";
     input.className = "survey-photo-file";
     input.dataset.photoInput = source;
     input.setAttribute("aria-describedby", statusId);
@@ -352,37 +353,99 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function prepareDocumentationPhoto(file) {
-    if (!file.type.startsWith("image/")) {
+    const isHeic = isHeicPhoto(file);
+    if (!file.type.startsWith("image/") && !isHeic) {
       throw new Error("Pilih file foto yang valid.");
     }
     if (file.size > 20 * 1024 * 1024) {
       throw new Error("Ukuran foto maksimal 20 MB.");
     }
 
-    const objectUrl = URL.createObjectURL(file);
+    const image = await loadDocumentationFileImage(file, isHeic);
+    const maxDimension = 1280;
+    const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Foto tidak bisa diproses oleh browser ini.");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.75);
+  }
+
+  function isHeicPhoto(file) {
+    const type = String(file.type || "").toLowerCase();
+    return ["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"].includes(type)
+      || /\.(heic|heif)$/i.test(file.name || "");
+  }
+
+  async function loadDocumentationFileImage(file, isHeic) {
     try {
-      const image = await loadDocumentationImage(objectUrl);
-      const maxDimension = 1280;
-      const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("Foto tidak bisa diproses oleh browser ini.");
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL("image/jpeg", 0.75);
+      return await loadDocumentationBlobImage(file);
+    } catch {
+      if (!isHeic) {
+        throw new Error("Foto tidak bisa dibaca. Pilih file JPG, PNG, HEIC, atau HEIF lain.");
+      }
+    }
+
+    const convertedPhoto = await convertHeicPhoto(file);
+    try {
+      return await loadDocumentationBlobImage(convertedPhoto);
+    } catch {
+      throw new Error("Foto HEIC tidak bisa diproses. Coba pilih foto lain.");
+    }
+  }
+
+  async function loadDocumentationBlobImage(blob) {
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      return await loadDocumentationImage(objectUrl);
     } finally {
       URL.revokeObjectURL(objectUrl);
     }
+  }
+
+  async function convertHeicPhoto(file) {
+    try {
+      const converter = await loadHeicConverter();
+      const result = await converter({ blob: file, toType: "image/jpeg", quality: 0.9 });
+      const convertedPhoto = Array.isArray(result) ? result[0] : result;
+      if (!(convertedPhoto instanceof Blob)) throw new Error("Invalid HEIC conversion result.");
+      return convertedPhoto;
+    } catch {
+      throw new Error("Foto HEIC tidak bisa diproses. Coba pilih foto lain.");
+    }
+  }
+
+  function loadHeicConverter() {
+    if (typeof window.heic2any === "function") return Promise.resolve(window.heic2any);
+    if (heicConverterPromise) return heicConverterPromise;
+
+    heicConverterPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "assets/vendor/heic2any/heic2any-0.0.4.min.js";
+      script.async = true;
+      script.onload = () => {
+        if (typeof window.heic2any === "function") resolve(window.heic2any);
+        else reject(new Error("HEIC converter is unavailable."));
+      };
+      script.onerror = () => reject(new Error("HEIC converter could not be loaded."));
+      document.head.appendChild(script);
+    }).catch((error) => {
+      heicConverterPromise = undefined;
+      throw error;
+    });
+
+    return heicConverterPromise;
   }
 
   function loadDocumentationImage(source) {
     return new Promise((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error("Foto tidak bisa dibaca. Pilih file JPG atau PNG lain."));
+      image.onerror = () => reject(new Error("Foto tidak bisa dibaca."));
       image.src = source;
     });
   }

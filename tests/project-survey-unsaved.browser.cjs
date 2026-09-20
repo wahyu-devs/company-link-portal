@@ -18,7 +18,12 @@ async function main() {
       const relative = decodeURIComponent(new URL(req.url, "http://localhost").pathname).replace(/^\/+/, "");
       const file = path.resolve(root, relative || "index.html");
       if (!file.startsWith(root + path.sep)) throw new Error("Invalid path");
-      const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png" };
+      const types = {
+        ".html": "text/html",
+        ".js": "text/javascript",
+        ".css": "text/css",
+        ".png": "image/png",
+      };
       res.setHeader("Content-Type", types[path.extname(file)] || "application/octet-stream");
       res.end(await fs.readFile(file));
     } catch {
@@ -219,6 +224,7 @@ async function main() {
       assert(await photoField.locator('[data-photo-source="gallery"]').isVisible());
       assert.equal(await photoField.locator('[data-photo-input="camera"]').getAttribute("capture"), "environment");
       assert.equal(await photoField.locator('[data-photo-input="gallery"]').getAttribute("capture"), null);
+      assert.match(await photoField.locator('[data-photo-input="gallery"]').getAttribute("accept"), /\.heic/);
       assert.equal(await photoField.locator(".survey-photo-preview img").count(), 1);
 
       await photoField.locator('[data-photo-input="gallery"]').setInputFiles({
@@ -227,9 +233,11 @@ async function main() {
       await page.waitForFunction(() => document.querySelector("[data-photo-status]")?.textContent.includes("valid"));
       assert.match(await photoField.locator("[data-photo-status]").textContent(), /valid/);
 
-      await photoField.locator('[data-photo-input="gallery"]').setInputFiles(
-        path.join(root, "assets/images/project-survey-logo.png")
-      );
+      await photoField.locator('[data-photo-input="gallery"]').setInputFiles({
+        name: "iphone-photo.HEIC",
+        mimeType: "application/octet-stream",
+        buffer: await fs.readFile(path.join(root, "tests/fixtures/project-survey-logo.heic")),
+      });
       await page.waitForFunction(() => document.querySelector('#documentationRows [data-field="photo"]')
         ?.value.startsWith("data:image/jpeg;base64,"));
       await dirty(true);

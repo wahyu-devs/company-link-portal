@@ -61,6 +61,11 @@ draft, prompts Google login when needed, and sends the generated Excel/PDF files
 as Gmail attachments. This
 browser-based setup does not use a client secret.
 
+Documentation photos accept JPG, PNG, HEIC, and HEIF files up to 20 MB. HEIC and
+HEIF photos are converted locally to JPEG when the browser cannot decode them
+natively. The fallback converter is vendored in `assets/vendor/heic2any/` and
+loaded only when needed.
+
 ## Load a Survey from Excel
 
 In Project Survey Form, select **Load**, then **Load from Excel** in Load Documents.

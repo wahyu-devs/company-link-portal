@@ -252,6 +252,13 @@ async function main() {
 
       await page.locator('#documentationRows [data-remove-row="documentation"]').click();
       assert.equal(await photoField.locator("[data-photo-toggle]").getAttribute("aria-label"), "Tambah Foto");
+      assert(await photoField.locator("[data-photo-toggle] i").evaluate((icon) => icon.classList.contains("bi-image")));
+      assert.equal(
+        await photoField.locator("[data-photo-toggle]").evaluate((button) => (
+          getComputedStyle(button, "::after").content
+        )),
+        '"+"'
+      );
       await dirty(true);
       await page.locator("#saveSurvey").click();
       assert.match(await page.locator("#surveyToast").textContent(), /berhasil diperbarui/);

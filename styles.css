@@ -1117,8 +1117,7 @@ body.survey-page {
 }
 
 .survey-photo-manage,
-.survey-photo-choice,
-.survey-photo-clear {
+.survey-photo-choice {
   width: 44px;
   height: 44px;
   min-height: 44px;
@@ -1138,8 +1137,7 @@ body.survey-page {
 }
 
 .survey-photo-manage i,
-.survey-photo-choice i,
-.survey-photo-clear i {
+.survey-photo-choice i {
   font-size: 16px;
 }
 
@@ -1147,12 +1145,6 @@ body.survey-page {
   border-color: var(--border-strong);
   background: var(--control-hover);
   color: var(--text);
-}
-
-.survey-photo-clear {
-  border-color: rgba(251, 113, 133, 0.4);
-  background: rgba(244, 63, 94, 0.08);
-  color: #fb7185;
 }
 
 .survey-photo-manage:hover,
@@ -1211,22 +1203,14 @@ body.survey-page {
   opacity: 0.45;
 }
 
-.survey-photo-clear:hover {
-  border-color: rgba(251, 113, 133, 0.5);
-  background: rgba(244, 63, 94, 0.14);
-  color: #fb7185;
-}
-
 .survey-photo-manage:focus-visible,
-.survey-photo-choice:focus-visible,
-.survey-photo-clear:focus-visible {
+.survey-photo-choice:focus-visible {
   outline: none;
   box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
 .survey-photo-manage:disabled,
-.survey-photo-choice:disabled,
-.survey-photo-clear:disabled {
+.survey-photo-choice:disabled {
   cursor: wait;
   opacity: 0.55;
 }

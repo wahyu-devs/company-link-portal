@@ -323,17 +323,6 @@ document.addEventListener("DOMContentLoaded", () => {
     manageButton.innerHTML = `<i class="bi ${manageButton.dataset.photoDefaultIcon}" aria-hidden="true"></i>`;
     actions.appendChild(manageButton);
 
-    if (value) {
-      const clearButton = document.createElement("button");
-      clearButton.type = "button";
-      clearButton.className = "survey-photo-clear";
-      clearButton.dataset.clearPhoto = "";
-      clearButton.setAttribute("aria-label", "Hapus Foto");
-      clearButton.title = "Hapus Foto";
-      clearButton.innerHTML = '<i class="bi bi-trash" aria-hidden="true"></i>';
-      actions.appendChild(clearButton);
-    }
-
     const choices = document.createElement("div");
     choices.id = `documentationPhotoChoices-${rowIndex}`;
     choices.className = "survey-photo-source-options";
@@ -2930,16 +2919,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ?.click();
       return;
     }
-
-    const clearButton = target?.closest("[data-clear-photo]");
-    if (!clearButton) return;
-    const photoInput = clearButton.closest(".survey-photo-field")?.querySelector('[data-field="photo"]');
-    if (!photoInput) return;
-    photoInput.value = "";
-    syncStateFromForm();
-    renderSection("documentation");
-    updateUnsavedProtection();
-    setStatus("Foto dokumentasi dihapus.", "success");
   });
 
   sectionConfig.documentation.target.addEventListener("change", (event) => {

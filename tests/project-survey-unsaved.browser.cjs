@@ -206,7 +206,11 @@ async function main() {
       await load();
       const photoField = page.locator("#documentationRows .survey-photo-field").first();
       assert.equal(await photoField.locator("[data-photo-toggle]").getAttribute("aria-label"), "Ganti Foto");
-      assert.equal(await photoField.locator("[data-clear-photo]").getAttribute("aria-label"), "Hapus Foto");
+      assert.equal(await photoField.locator("[data-clear-photo]").count(), 0);
+      assert.equal(
+        await page.locator('#documentationRows [data-remove-row="documentation"]').getAttribute("aria-label"),
+        "Hapus Dokumentasi 1"
+      );
       assert.equal(await photoField.locator("button span").count(), 0);
       assert(await photoField.locator(".survey-photo-source-options").isHidden());
       assert.equal(await photoField.locator("[data-photo-status]").textContent(), "");
@@ -246,13 +250,12 @@ async function main() {
       assert((await saved()).find((draft) => draft.id === "first")
         .data.documentation[0].photo.startsWith("data:image/jpeg;base64,"));
 
-      await photoField.locator("[data-clear-photo]").click();
+      await page.locator('#documentationRows [data-remove-row="documentation"]').click();
       assert.equal(await photoField.locator("[data-photo-toggle]").getAttribute("aria-label"), "Tambah Foto");
-      assert.equal(await photoField.locator("[data-clear-photo]").count(), 0);
       await dirty(true);
       await page.locator("#saveSurvey").click();
-      assert.match(await page.locator("#surveyToast").textContent(), /Foto wajib diisi/);
-      await dirty(true);
+      assert.match(await page.locator("#surveyToast").textContent(), /berhasil diperbarui/);
+      await dirty(false);
 
       const imageBase64 = (await fs.readFile(
         path.join(root, "assets/images/project-survey-logo.png")
@@ -267,6 +270,7 @@ async function main() {
       await page.waitForFunction(() => document.querySelector('#documentationRows [data-field="photo"]')
         ?.value.startsWith("data:image/jpeg;base64,"));
       assert.equal(await photoField.locator(".survey-photo-preview img").count(), 1);
+      await dirty(true);
     });
 
     await check("New: Cancel, keyboard focus, Discard, and Save & Continue", async ({ page, dirty, saved, modal, choose, load }) => {

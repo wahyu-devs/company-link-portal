@@ -314,13 +314,13 @@ document.addEventListener("DOMContentLoaded", () => {
     manageButton.className = "survey-photo-manage";
     manageButton.dataset.photoToggle = "";
     manageButton.dataset.photoDefaultLabel = value ? "Ganti Foto" : "Tambah Foto";
-    manageButton.dataset.photoDefaultIcon = value ? "bi-arrow-repeat" : "bi-image";
+    manageButton.dataset.photoDefaultIcon = value ? "bi-arrow-repeat" : "photo-add";
     manageButton.setAttribute("aria-expanded", "false");
     manageButton.setAttribute("aria-controls", `documentationPhotoChoices-${rowIndex}`);
     manageButton.setAttribute("aria-describedby", statusId);
     manageButton.setAttribute("aria-label", manageButton.dataset.photoDefaultLabel);
     manageButton.title = manageButton.dataset.photoDefaultLabel;
-    manageButton.innerHTML = `<i class="bi ${manageButton.dataset.photoDefaultIcon}" aria-hidden="true"></i>`;
+    manageButton.innerHTML = photoManageIconMarkup(manageButton.dataset.photoDefaultIcon);
     actions.appendChild(manageButton);
 
     const choices = document.createElement("div");
@@ -357,6 +357,17 @@ document.addEventListener("DOMContentLoaded", () => {
     return button;
   }
 
+  function photoManageIconMarkup(icon) {
+    if (icon === "photo-add") {
+      return [
+        '<svg class="survey-photo-add-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">',
+        '<path d="M21 19V5a2 2 0 0 0-2-2h-7v2h7v14H5v-7H3v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2ZM8.5 13.5 11 16.51 14.5 12l4.5 6H6l2.5-4.5ZM5 11h2V7h4V5H7V1H5v4H1v2h4v4Z" fill="currentColor"/>',
+        "</svg>",
+      ].join("");
+    }
+    return `<i class="bi ${icon}" aria-hidden="true"></i>`;
+  }
+
   function setPhotoSourceOptions(field, open) {
     const choices = field?.querySelector(".survey-photo-source-options");
     const toggleButton = field?.querySelector("[data-photo-toggle]");
@@ -367,8 +378,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const label = open ? "Batal" : toggleButton.dataset.photoDefaultLabel;
     toggleButton.setAttribute("aria-label", label);
     toggleButton.title = label;
-    const icon = toggleButton.querySelector("i");
-    if (icon) icon.className = `bi ${open ? "bi-x-lg" : toggleButton.dataset.photoDefaultIcon}`;
+    toggleButton.innerHTML = photoManageIconMarkup(open ? "bi-x-lg" : toggleButton.dataset.photoDefaultIcon);
   }
 
   function photoFileInput(source, capture, statusId) {

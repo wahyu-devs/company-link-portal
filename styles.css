@@ -1141,28 +1141,16 @@ body.survey-page {
   font-size: 16px;
 }
 
+.survey-photo-add-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
 .survey-photo-manage {
-  position: relative;
   border-color: var(--border-strong);
   background: var(--control-hover);
   color: var(--text);
-}
-
-.survey-photo-manage[data-photo-default-label="Tambah Foto"][aria-expanded="false"]::after {
-  content: "+";
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 13px;
-  height: 13px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--surface);
-  font-size: 10px;
-  font-weight: 900;
-  line-height: 1;
 }
 
 .survey-photo-manage:hover,

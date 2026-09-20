@@ -490,10 +490,7 @@ async function main() {
       assert.equal(documentationLayout.rowFits, true);
       assert.equal(documentationLayout.columns, 1);
       assert.equal(await page.locator("#documentationRows .survey-row-header").count(), 0);
-      assert.deepEqual(
-        await page.locator("#documentationRows .survey-mobile-field-label").allTextContents(),
-        ["Deskripsi"]
-      );
+      assert.equal(await page.locator("#documentationRows .survey-mobile-field-label").count(), 0);
       await page.locator("#resetSurvey").click();
       await choose("cancel");
       assert.equal(await page.locator("#projectName").inputValue(), fixture().projectName);

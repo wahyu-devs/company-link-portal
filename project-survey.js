@@ -253,13 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
         input.setAttribute("aria-label", `${column.label} ${rowIndex + 1}`);
         if (column.placeholder) input.placeholder = column.placeholder;
 
-        if (sectionKey === "documentation") {
-          const mobileLabel = document.createElement("span");
-          mobileLabel.className = "survey-mobile-field-label";
-          mobileLabel.textContent = column.label;
-          label.appendChild(mobileLabel);
-        }
-
         label.append(input);
         rowElement.appendChild(label);
       });

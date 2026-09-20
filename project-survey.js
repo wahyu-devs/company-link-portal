@@ -302,7 +302,7 @@ document.addEventListener("DOMContentLoaded", () => {
       image.alt = `Foto dokumentasi ${rowIndex + 1}`;
       preview.appendChild(image);
     } else {
-      preview.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i><span>Belum ada foto</span><small class="survey-photo-drop-hint">Tarik foto ke sini</small>';
+      preview.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i><span>Belum ada foto</span><small class="survey-photo-drop-hint">Tarik foto ke area ini atau pilih dari tombol di atas</small>';
     }
 
     const statusId = `documentationPhotoStatus-${rowIndex}`;

@@ -410,25 +410,25 @@ document.addEventListener("DOMContentLoaded", () => {
   async function convertHeicPhoto(file) {
     try {
       const converter = await loadHeicConverter();
-      const result = await converter({ blob: file, toType: "image/jpeg", quality: 0.9 });
-      const convertedPhoto = Array.isArray(result) ? result[0] : result;
+      const convertedPhoto = await converter({ blob: file, type: "image/jpeg", quality: 0.9 });
       if (!(convertedPhoto instanceof Blob)) throw new Error("Invalid HEIC conversion result.");
       return convertedPhoto;
-    } catch {
+    } catch (error) {
+      console.warn("HEIC conversion failed.", error);
       throw new Error("Foto HEIC tidak bisa diproses. Coba pilih foto lain.");
     }
   }
 
   function loadHeicConverter() {
-    if (typeof window.heic2any === "function") return Promise.resolve(window.heic2any);
+    if (typeof window.HeicTo === "function") return Promise.resolve(window.HeicTo);
     if (heicConverterPromise) return heicConverterPromise;
 
     heicConverterPromise = new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = "assets/vendor/heic2any/heic2any-0.0.4.min.js";
+      script.src = "assets/vendor/heic-to/heic-to-1.5.2.js";
       script.async = true;
       script.onload = () => {
-        if (typeof window.heic2any === "function") resolve(window.heic2any);
+        if (typeof window.HeicTo === "function") resolve(window.HeicTo);
         else reject(new Error("HEIC converter is unavailable."));
       };
       script.onerror = () => reject(new Error("HEIC converter could not be loaded."));

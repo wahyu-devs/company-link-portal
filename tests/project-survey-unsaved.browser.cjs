@@ -6,6 +6,8 @@ const { chromium } = require("playwright");
 const { root, fixture, exportFile } = require("./helpers/survey-fixtures.cjs");
 
 const storageKey = "projectSurveyFormDraft";
+const heicFixturePath = process.env.PROJECT_SURVEY_HEIC_FIXTURE
+  || path.join(root, "tests/fixtures/project-survey-logo.heic");
 const firstDraft = { id: "first", savedAt: "2026-09-02T00:00:00Z", data: fixture() };
 const secondDraft = {
   id: "second", savedAt: firstDraft.savedAt,
@@ -236,7 +238,7 @@ async function main() {
       await photoField.locator('[data-photo-input="gallery"]').setInputFiles({
         name: "iphone-photo.HEIC",
         mimeType: "application/octet-stream",
-        buffer: await fs.readFile(path.join(root, "tests/fixtures/project-survey-logo.heic")),
+        buffer: await fs.readFile(heicFixturePath),
       });
       await page.waitForFunction(() => document.querySelector('#documentationRows [data-field="photo"]')
         ?.value.startsWith("data:image/jpeg;base64,"));

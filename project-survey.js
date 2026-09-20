@@ -218,14 +218,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const rows = state[sectionKey].length ? state[sectionKey] : [emptyRow(config.columns)];
     const fragment = document.createDocumentFragment();
 
-    const header = document.createElement("div");
-    header.className = "survey-row survey-row-header";
-    header.innerHTML = [
-      `<span>No</span>`,
-      ...config.columns.map((column) => `<span>${column.label}</span>`),
-      `<span>Aksi</span>`,
-    ].join("");
-    fragment.appendChild(header);
+    if (sectionKey !== "documentation") {
+      const header = document.createElement("div");
+      header.className = "survey-row survey-row-header";
+      header.innerHTML = [
+        `<span>No</span>`,
+        ...config.columns.map((column) => `<span>${column.label}</span>`),
+        `<span>Aksi</span>`,
+      ].join("");
+      fragment.appendChild(header);
+    }
 
     rows.forEach((row, rowIndex) => {
       const rowElement = document.createElement("div");

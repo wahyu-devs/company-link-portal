@@ -113,29 +113,32 @@ async function main() {
       await page.keyboard.press("Escape");
       await load();
       assert.equal(await page.locator("#remarkRows .survey-row-header span").nth(1).textContent(), "Catatan");
-      assert.deepEqual(
-        await page.locator("#documentationRows .survey-row-header span").allTextContents(),
-        ["No", "Foto", "Deskripsi", "Aksi"]
-      );
+      assert.equal(await page.locator("#documentationRows .survey-row-header").count(), 0);
       const documentationLayout = await page.locator("#documentationRows").evaluate((table) => {
         const row = table.querySelector(".survey-row:not(.survey-row-header)");
+        const tableStyle = getComputedStyle(table);
+        const rowStyle = getComputedStyle(row);
         const photo = row.querySelector(".survey-photo-field").getBoundingClientRect();
         const number = row.querySelector(".survey-row-number").getBoundingClientRect();
         const description = row.querySelector('[data-field="description"]').getBoundingClientRect();
         const action = row.querySelector(".survey-remove-row").getBoundingClientRect();
         return {
           fits: table.scrollWidth <= table.clientWidth + 1,
+          columns: tableStyle.gridTemplateColumns.split(" ").length,
+          cardBorder: rowStyle.borderTopWidth,
+          cardBackground: rowStyle.backgroundColor,
           photoWidth: photo.width,
           descriptionWidth: description.width,
-          photoHeight: photo.height,
           compactHeights: [number.height, description.height, action.height],
         };
       });
       assert.equal(documentationLayout.fits, true);
-      assert(documentationLayout.photoWidth >= 330);
-      assert(documentationLayout.descriptionWidth >= 190);
+      assert.equal(documentationLayout.columns, 2);
+      assert.equal(documentationLayout.cardBorder, "1px");
+      assert.notEqual(documentationLayout.cardBackground, "rgba(0, 0, 0, 0)");
+      assert(documentationLayout.photoWidth >= 300);
+      assert(documentationLayout.descriptionWidth >= 300);
       assert(documentationLayout.compactHeights.every((height) => Math.abs(height - 44) <= 1));
-      assert(documentationLayout.photoHeight > documentationLayout.compactHeights[0]);
       assert.equal(
         await page.locator('#documentationRows [data-field="description"]').first().getAttribute("placeholder"),
         "Deskripsi foto"
@@ -461,12 +464,13 @@ async function main() {
         return {
           fits: table.scrollWidth <= table.clientWidth + 1,
           rowFits: rowRect.left >= tableRect.left - 1 && rowRect.right <= tableRect.right + 1,
-          headerDisplay: getComputedStyle(table.querySelector(".survey-row-header")).display,
+          columns: getComputedStyle(table).gridTemplateColumns.split(" ").length,
         };
       });
       assert.equal(documentationLayout.fits, true);
       assert.equal(documentationLayout.rowFits, true);
-      assert.equal(documentationLayout.headerDisplay, "none");
+      assert.equal(documentationLayout.columns, 1);
+      assert.equal(await page.locator("#documentationRows .survey-row-header").count(), 0);
       assert.deepEqual(
         await page.locator("#documentationRows .survey-mobile-field-label").first().allTextContents(),
         ["Foto"]

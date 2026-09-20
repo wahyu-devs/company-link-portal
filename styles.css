@@ -1012,10 +1012,6 @@ body.survey-page {
   min-width: 0;
 }
 
-.survey-table-documentation .survey-row-header {
-  display: none;
-}
-
 .survey-table-documentation .survey-row:not(.survey-row-header) {
   grid-template-columns: 42px minmax(0, 1fr) 44px;
   grid-template-areas:
@@ -1561,40 +1557,29 @@ body.survey-page {
     align-items: center;
   }
 
-  .survey-table-documentation .survey-row-header {
-    display: grid;
-    grid-template-columns: 42px minmax(300px, 1fr) minmax(190px, 1.2fr) 44px;
+  .survey-table-documentation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
   .survey-table-documentation .survey-row:not(.survey-row-header) {
-    grid-template-columns: 42px minmax(300px, 1fr) minmax(190px, 1.2fr) 44px;
-    grid-template-areas: "number photo description action";
-    align-items: stretch;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
+    grid-template-columns: 42px minmax(0, 1fr) 44px;
+    grid-template-areas:
+      "number . action"
+      "photo photo photo"
+      "description description description";
+    align-content: start;
+    padding: 12px;
   }
 
   .survey-table-documentation .survey-row-number,
   .survey-table-documentation .survey-remove-row {
     height: 44px;
-    align-self: center;
-  }
-
-  .survey-table-documentation .survey-row-field {
-    align-self: center;
-  }
-
-  .survey-table-documentation .survey-row-field input {
-    height: 44px;
+    align-self: start;
   }
 
   .survey-photo-field {
-    padding: 8px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface-soft);
+    padding: 0;
   }
 
   .survey-photo-preview {

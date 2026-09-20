@@ -120,16 +120,22 @@ async function main() {
       const documentationLayout = await page.locator("#documentationRows").evaluate((table) => {
         const row = table.querySelector(".survey-row:not(.survey-row-header)");
         const photo = row.querySelector(".survey-photo-field").getBoundingClientRect();
-        const description = row.querySelector(".survey-row-field").getBoundingClientRect();
+        const number = row.querySelector(".survey-row-number").getBoundingClientRect();
+        const description = row.querySelector('[data-field="description"]').getBoundingClientRect();
+        const action = row.querySelector(".survey-remove-row").getBoundingClientRect();
         return {
           fits: table.scrollWidth <= table.clientWidth + 1,
           photoWidth: photo.width,
           descriptionWidth: description.width,
+          heights: [photo.height, number.height, description.height, action.height],
         };
       });
       assert.equal(documentationLayout.fits, true);
       assert(documentationLayout.photoWidth >= 330);
       assert(documentationLayout.descriptionWidth >= 190);
+      assert(documentationLayout.heights.every((height) => (
+        Math.abs(height - documentationLayout.heights[0]) <= 1
+      )));
       assert.equal(
         await page.locator('#documentationRows [data-field="description"]').first().getAttribute("placeholder"),
         "Deskripsi foto"

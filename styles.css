@@ -1521,11 +1521,16 @@ body.survey-page {
 
   .survey-table-documentation .survey-row-number,
   .survey-table-documentation .survey-remove-row {
-    align-self: center;
+    height: auto;
+    align-self: stretch;
   }
 
   .survey-table-documentation .survey-row-field {
-    align-self: center;
+    align-self: stretch;
+  }
+
+  .survey-table-documentation .survey-row-field input {
+    height: 100%;
   }
 
   .survey-photo-field {

@@ -1515,6 +1515,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return maxLength ? Math.min(255, maxLength + 1) : 8;
   }
 
+  function worksheetColumnWidthEmu(width) {
+    return Math.floor(width * 7 + 5) * 9525;
+  }
+
   function buildWorksheetXml(data, documentationPhotos = []) {
     const rows = [];
     const mergedCells = ["A6:G6"];
@@ -1537,6 +1541,8 @@ document.addEventListener("DOMContentLoaded", () => {
       itemNoteSpanWidth - locationColumnWidth
     );
     const itemNoteColumnWidth = 16;
+    const documentationPhotoColumnWidths = [22.33203125, 10, 10, itemNoteColumnWidth]
+      .map(worksheetColumnWidthEmu);
     let rowNumber = 6;
 
     rows.push(rowXml(rowNumber, [
@@ -1582,7 +1588,8 @@ document.addEventListener("DOMContentLoaded", () => {
       rowNumber,
       data.documentation,
       mergedCells,
-      documentationPhotos
+      documentationPhotos,
+      documentationPhotoColumnWidths
     );
 
     const lastRow = rowNumber - 1;
@@ -1697,7 +1704,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return rowNumber;
   }
 
-  function appendDocumentationSection(rows, rowNumber, documentation, mergedCells, photos) {
+  function appendDocumentationSection(
+    rows,
+    rowNumber,
+    documentation,
+    mergedCells,
+    photos,
+    photoColumnWidths
+  ) {
     rows.push(rowXml(rowNumber, [cell(`A${rowNumber}`, 4, "F. DOKUMENTASI")]));
     rowNumber += 1;
     rows.push(rowXml(rowNumber, [cell(`A${rowNumber}`, 4, "")]));
@@ -1726,7 +1740,14 @@ document.addEventListener("DOMContentLoaded", () => {
         cell(`G${rowNumber}`, 3, ""),
       ], { height: image ? 120 : rowHeightForTextValues(item.description), customHeight: Boolean(image) }));
       mergedCells.push(`B${rowNumber}:E${rowNumber}`, `F${rowNumber}:G${rowNumber}`);
-      if (image) photos.push({ rowNumber, image });
+      if (image) {
+        const dimensions = documentationImageDimensions(image.base64, image.extension);
+        photos.push({
+          rowNumber,
+          image: { ...image, ...(dimensions || {}) },
+          columnWidths: photoColumnWidths,
+        });
+      }
       rowNumber += 1;
     });
 
@@ -1737,11 +1758,58 @@ document.addEventListener("DOMContentLoaded", () => {
     const match = /^data:image\/(png|jpeg);base64,([a-z0-9+/=]+)$/i.exec(String(value || ""));
     if (!match) return null;
     const format = match[1].toLowerCase();
+    const extension = format === "png" ? "png" : "jpg";
     return {
       base64: match[2],
-      extension: format === "png" ? "png" : "jpg",
+      extension,
       pdfFormat: format === "png" ? "PNG" : "JPEG",
     };
+  }
+
+  function documentationImageDimensions(base64, extension) {
+    let bytes;
+    try {
+      bytes = base64ToUint8Array(base64);
+    } catch {
+      return null;
+    }
+
+    if (extension === "png" && bytes.length >= 24
+      && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+      const readUint32 = (offset) => (
+        bytes[offset] * 0x1000000
+        + bytes[offset + 1] * 0x10000
+        + bytes[offset + 2] * 0x100
+        + bytes[offset + 3]
+      );
+      return { width: readUint32(16), height: readUint32(20) };
+    }
+
+    if (extension !== "jpg" || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+    const startOfFrameMarkers = [0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf];
+    let offset = 2;
+    while (offset + 8 < bytes.length) {
+      if (bytes[offset] !== 0xff) {
+        offset += 1;
+        continue;
+      }
+      const marker = bytes[offset + 1];
+      if (startOfFrameMarkers.includes(marker)) {
+        return {
+          width: bytes[offset + 7] * 0x100 + bytes[offset + 8],
+          height: bytes[offset + 5] * 0x100 + bytes[offset + 6],
+        };
+      }
+      if (marker === 0xd8 || marker === 0xd9 || marker === 0x01
+        || (marker >= 0xd0 && marker <= 0xd7)) {
+        offset += 2;
+        continue;
+      }
+      const segmentLength = bytes[offset + 2] * 0x100 + bytes[offset + 3];
+      if (segmentLength < 2) return null;
+      offset += segmentLength + 2;
+    }
+    return null;
   }
 
   function buildDocumentationDataWorksheetXml(documentation) {
@@ -1776,11 +1844,44 @@ document.addEventListener("DOMContentLoaded", () => {
       const relationshipId = index + 2;
       const pictureId = index + 4;
       const rowIndex = photo.rowNumber - 1;
-      return `<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>1</xdr:col><xdr:colOff>95250</xdr:colOff><xdr:row>${rowIndex}</xdr:row><xdr:rowOff>95250</xdr:rowOff></xdr:from><xdr:to><xdr:col>5</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${rowIndex + 1}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${pictureId}" name="Documentation ${index + 1}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId${relationshipId}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>`;
+      const bounds = documentationPhotoDrawingBounds(photo);
+      return `<xdr:oneCellAnchor><xdr:from><xdr:col>${bounds.column}</xdr:col><xdr:colOff>${bounds.columnOffset}</xdr:colOff><xdr:row>${rowIndex}</xdr:row><xdr:rowOff>${bounds.rowOffset}</xdr:rowOff></xdr:from><xdr:ext cx="${bounds.width}" cy="${bounds.height}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${pictureId}" name="Documentation ${index + 1}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId${relationshipId}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
     }).join("");
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">${logoAnchor}${photoAnchors}</xdr:wsDr>`;
+  }
+
+  function documentationPhotoDrawingBounds(photo) {
+    const columnWidths = photo.columnWidths || [worksheetColumnWidthEmu(22.33203125),
+      worksheetColumnWidthEmu(10), worksheetColumnWidthEmu(10), worksheetColumnWidthEmu(16)];
+    const areaWidth = columnWidths.reduce((total, width) => total + width, 0);
+    const areaHeight = 120 * 12700;
+    const margin = 95250;
+    const hasDimensions = Number.isFinite(photo.image.width) && photo.image.width > 0
+      && Number.isFinite(photo.image.height) && photo.image.height > 0;
+    const imageWidth = hasDimensions ? photo.image.width : 4;
+    const imageHeight = hasDimensions ? photo.image.height : 3;
+    const scale = Math.min(
+      (areaWidth - margin * 2) / imageWidth,
+      (areaHeight - margin * 2) / imageHeight
+    );
+    const width = Math.max(1, Math.round(imageWidth * scale));
+    const height = Math.max(1, Math.round(imageHeight * scale));
+    let columnOffset = Math.round((areaWidth - width) / 2);
+    let column = 1;
+    for (const columnWidth of columnWidths) {
+      if (columnOffset < columnWidth) break;
+      columnOffset -= columnWidth;
+      column += 1;
+    }
+    return {
+      column,
+      columnOffset,
+      rowOffset: Math.round((areaHeight - height) / 2),
+      width,
+      height,
+    };
   }
 
   function buildDrawingRelationshipsXml(documentationPhotos) {

@@ -90,8 +90,8 @@ test("Excel embeds documentation photos and keeps their source data on a hidden 
   assert.equal(workbook.Workbook.Sheets.find((sheet) => sheet.name === "DocumentationData").Hidden, 1);
   assert(binaryText.includes("xl/media/image2.png"));
   assert(binaryText.includes('name="Documentation 1"'));
+  assert(binaryText.includes("<xdr:oneCellAnchor>"));
   assert(binaryText.includes('<xdr:col>1</xdr:col>'));
-  assert(binaryText.includes('<xdr:col>5</xdr:col>'));
 
   const documentationMarker = binaryText.indexOf("PROJECT SURVEY DOCUMENTATION DATA");
   const documentationWorksheetStart = binaryText.lastIndexOf("<worksheet ", documentationMarker);
@@ -105,6 +105,28 @@ test("Excel embeds documentation photos and keeps their source data on a hidden 
     documentationWorksheetXml,
     /xmlns:x14ac="http:\/\/schemas\.microsoft\.com\/office\/spreadsheetml\/2009\/9\/ac"/
   );
+});
+
+test("Excel documentation photos preserve their aspect ratios", async () => {
+  const data = fixture();
+  const portraitPhoto = fs.readFileSync(path.join(root, "assets/images/perkom-logo.png")).toString("base64");
+  data.documentation.push({
+    photo: `data:image/png;base64,${portraitPhoto}`,
+    description: "Portrait photo",
+  });
+  const buffer = Buffer.from(await (await exportFile(data)).arrayBuffer());
+  const binaryText = buffer.toString("latin1");
+  const drawingStart = binaryText.indexOf("<xdr:wsDr ");
+  const drawingEnd = binaryText.indexOf("</xdr:wsDr>", drawingStart);
+  const drawingXml = binaryText.slice(drawingStart, drawingEnd + "</xdr:wsDr>".length);
+  const anchors = [...drawingXml.matchAll(
+    /<xdr:oneCellAnchor>[\s\S]*?<xdr:ext cx="(\d+)" cy="(\d+)"\/>[\s\S]*?name="Documentation (\d+)"[\s\S]*?<\/xdr:oneCellAnchor>/g
+  )];
+
+  assert.equal(anchors.length, 2);
+  const ratios = anchors.map((match) => Number(match[1]) / Number(match[2]));
+  assert(Math.abs(ratios[0] - 400 / 158) < 0.001);
+  assert(Math.abs(ratios[1] - 254 / 302) < 0.001);
 });
 
 test("documentation photos stay matched when earlier rows are blank", async () => {

@@ -1712,8 +1712,9 @@ body.survey-page {
 }
 
 @media (max-width: 759px) {
-  .survey-form {
-    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  .survey-actions-slot {
+    min-width: 0;
+    min-height: 58px;
   }
 
   .survey-actions {
@@ -1730,6 +1731,18 @@ body.survey-page {
     gap: 4px;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-soft);
+  }
+
+  .survey-actions.is-docked {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    z-index: auto;
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+    box-shadow: none;
   }
 
   .survey-primary-action {

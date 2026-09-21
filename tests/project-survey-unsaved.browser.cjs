@@ -477,6 +477,8 @@ async function main() {
       await waitForImport();
       await dirty(true);
       await page.setViewportSize({ width: 320, height: 700 });
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForFunction(() => !document.querySelector(".survey-actions")?.classList.contains("is-docked"));
       const actionLayout = await page.locator(".survey-actions").evaluate((actions) => {
         const rect = actions.getBoundingClientRect();
         const contentRect = document.querySelector(".page-container").getBoundingClientRect();
@@ -502,9 +504,14 @@ async function main() {
         };
       });
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-      const actionLayoutAfterScroll = await page.locator(".survey-actions").evaluate((actions) => {
+      await page.waitForFunction(() => document.querySelector(".survey-actions")?.classList.contains("is-docked"));
+      const dockedActionLayout = await page.locator(".survey-actions").evaluate((actions) => {
         const rect = actions.getBoundingClientRect();
-        return { top: rect.top, bottom: rect.bottom };
+        const slotRect = actions.closest(".survey-actions-slot").getBoundingClientRect();
+        return {
+          position: getComputedStyle(actions).position,
+          insideSlot: rect.top >= slotRect.top - 1 && rect.bottom <= slotRect.bottom + 1,
+        };
       });
       assert.equal(actionLayout.position, "fixed");
       assert.equal(actionLayout.columns, 6);
@@ -517,8 +524,13 @@ async function main() {
       assert.equal(actionLayout.borderless, true);
       assert.equal(actionLayout.labelled, true);
       assert(actionLayout.tapTargets.every((height) => height >= 44));
-      assert(Math.abs(actionLayoutAfterScroll.top - actionLayout.top) <= 1);
-      assert(Math.abs(actionLayoutAfterScroll.bottom - actionLayout.bottom) <= 1);
+      assert.equal(dockedActionLayout.position, "static");
+      assert.equal(dockedActionLayout.insideSlot, true);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForFunction(() => !document.querySelector(".survey-actions")?.classList.contains("is-docked"));
+      assert.equal(await page.locator(".survey-actions").evaluate(
+        (actions) => getComputedStyle(actions).position
+      ), "fixed");
       await page.setViewportSize({ width: 700, height: 700 });
       const wideActionAlignment = await page.locator(".survey-actions").evaluate((actions) => {
         const rect = actions.getBoundingClientRect();

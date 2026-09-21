@@ -150,6 +150,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const unsavedSurveyModal = document.getElementById("unsavedSurveyModal");
   const unsavedSurveyCancel = document.getElementById("unsavedSurveyCancel");
   const surveyHomeButton = document.querySelector(".survey-home-button");
+  const surveyActions = document.querySelector(".survey-actions");
+  const surveyActionsSlot = document.querySelector(".survey-actions-slot");
   const pageLoader = document.getElementById("pageLoader");
   const LOADER_MIN_DURATION = 1000;
   const loaderStartedAt = performance.now();
@@ -212,6 +214,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderAllSections() {
     Object.keys(sectionConfig).forEach(renderSection);
+  }
+
+  function initializeMobileActionsDock() {
+    if (!surveyActions || !surveyActionsSlot || !("IntersectionObserver" in window)) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      surveyActions.classList.toggle("is-docked", entry.isIntersecting);
+    }, { threshold: 0.01 });
+    observer.observe(surveyActionsSlot);
   }
 
   function renderSection(sectionKey) {
@@ -3240,6 +3251,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   initializeForm();
+  initializeMobileActionsDock();
 
   if (document.readyState === "complete") {
     hidePageLoader();

@@ -476,8 +476,10 @@ async function main() {
       await (await chooser).setFiles(payload);
       await waitForImport();
       await dirty(true);
+      await page.setViewportSize({ width: 320, height: 700 });
       const actionLayout = await page.locator(".survey-actions").evaluate((actions) => {
         const rect = actions.getBoundingClientRect();
+        const contentRect = document.querySelector(".page-container").getBoundingClientRect();
         const buttons = [...actions.querySelectorAll(".survey-primary-action")];
         return {
           position: getComputedStyle(actions).position,
@@ -485,7 +487,16 @@ async function main() {
           top: rect.top,
           bottom: rect.bottom,
           withinViewport: rect.top >= 0 && rect.bottom <= window.innerHeight + 1,
-          iconsOnly: buttons.every((button) => getComputedStyle(button.querySelector("span")).display === "none"),
+          horizontalWithinViewport: rect.left >= 0
+            && rect.right <= document.documentElement.clientWidth + 1,
+          alignsWithContent: Math.abs(rect.left - contentRect.left) <= 1
+            && Math.abs(rect.right - contentRect.right) <= 1,
+          bodyFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+          desktopLabelsHidden: buttons.every(
+            (button) => getComputedStyle(button.querySelector("span")).display === "none"
+          ),
+          mobileLabels: buttons.map((button) => getComputedStyle(button, "::after").content.replaceAll('"', "")),
+          borderless: buttons.every((button) => getComputedStyle(button).borderTopWidth === "0px"),
           labelled: buttons.every((button) => Boolean(button.getAttribute("aria-label"))),
           tapTargets: buttons.map((button) => button.getBoundingClientRect().height),
         };
@@ -498,11 +509,25 @@ async function main() {
       assert.equal(actionLayout.position, "fixed");
       assert.equal(actionLayout.columns, 6);
       assert.equal(actionLayout.withinViewport, true);
-      assert.equal(actionLayout.iconsOnly, true);
+      assert.equal(actionLayout.horizontalWithinViewport, true);
+      assert.equal(actionLayout.alignsWithContent, true);
+      assert.equal(actionLayout.bodyFits, true);
+      assert.equal(actionLayout.desktopLabelsHidden, true);
+      assert.deepEqual(actionLayout.mobileLabels, ["save", "load", "new", "excel", "pdf", "submit"]);
+      assert.equal(actionLayout.borderless, true);
       assert.equal(actionLayout.labelled, true);
       assert(actionLayout.tapTargets.every((height) => height >= 44));
       assert(Math.abs(actionLayoutAfterScroll.top - actionLayout.top) <= 1);
       assert(Math.abs(actionLayoutAfterScroll.bottom - actionLayout.bottom) <= 1);
+      await page.setViewportSize({ width: 700, height: 700 });
+      const wideActionAlignment = await page.locator(".survey-actions").evaluate((actions) => {
+        const rect = actions.getBoundingClientRect();
+        const contentRect = document.querySelector(".page-container").getBoundingClientRect();
+        return Math.abs(rect.left - contentRect.left) <= 1
+          && Math.abs(rect.right - contentRect.right) <= 1;
+      });
+      assert.equal(wideActionAlignment, true);
+      await page.setViewportSize({ width: 320, height: 700 });
       const documentationLayout = await page.locator("#documentationRows").evaluate((table) => {
         const row = table.querySelector(".survey-row:not(.survey-row-header)");
         const tableRect = table.getBoundingClientRect();

@@ -1710,3 +1710,40 @@ body.survey-page {
     min-height: 42px;
   }
 }
+
+@media (max-width: 759px) {
+  .survey-form {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .survey-actions {
+    position: fixed;
+    left: 50%;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 8000;
+    width: min(calc(100vw - 16px), 520px);
+    padding: 6px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-soft);
+    transform: translateX(-50%);
+  }
+
+  .survey-primary-action {
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .survey-primary-action i {
+    font-size: 18px;
+  }
+
+  .survey-primary-action span {
+    display: none;
+  }
+}

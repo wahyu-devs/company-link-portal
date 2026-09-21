@@ -476,6 +476,33 @@ async function main() {
       await (await chooser).setFiles(payload);
       await waitForImport();
       await dirty(true);
+      const actionLayout = await page.locator(".survey-actions").evaluate((actions) => {
+        const rect = actions.getBoundingClientRect();
+        const buttons = [...actions.querySelectorAll(".survey-primary-action")];
+        return {
+          position: getComputedStyle(actions).position,
+          columns: getComputedStyle(actions).gridTemplateColumns.split(" ").length,
+          top: rect.top,
+          bottom: rect.bottom,
+          withinViewport: rect.top >= 0 && rect.bottom <= window.innerHeight + 1,
+          iconsOnly: buttons.every((button) => getComputedStyle(button.querySelector("span")).display === "none"),
+          labelled: buttons.every((button) => Boolean(button.getAttribute("aria-label"))),
+          tapTargets: buttons.map((button) => button.getBoundingClientRect().height),
+        };
+      });
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      const actionLayoutAfterScroll = await page.locator(".survey-actions").evaluate((actions) => {
+        const rect = actions.getBoundingClientRect();
+        return { top: rect.top, bottom: rect.bottom };
+      });
+      assert.equal(actionLayout.position, "fixed");
+      assert.equal(actionLayout.columns, 6);
+      assert.equal(actionLayout.withinViewport, true);
+      assert.equal(actionLayout.iconsOnly, true);
+      assert.equal(actionLayout.labelled, true);
+      assert(actionLayout.tapTargets.every((height) => height >= 44));
+      assert(Math.abs(actionLayoutAfterScroll.top - actionLayout.top) <= 1);
+      assert(Math.abs(actionLayoutAfterScroll.bottom - actionLayout.bottom) <= 1);
       const documentationLayout = await page.locator("#documentationRows").evaluate((table) => {
         const row = table.querySelector(".survey-row:not(.survey-row-header)");
         const tableRect = table.getBoundingClientRect();

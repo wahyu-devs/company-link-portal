@@ -520,7 +520,7 @@ async function main() {
       assert.equal(actionLayout.alignsWithContent, true);
       assert.equal(actionLayout.bodyFits, true);
       assert.equal(actionLayout.desktopLabelsHidden, true);
-      assert.deepEqual(actionLayout.mobileLabels, ["save", "load", "new", "excel", "pdf", "submit"]);
+      assert.deepEqual(actionLayout.mobileLabels, ["Save", "Load", "New", "Excel", "PDF", "Submit"]);
       assert.equal(actionLayout.borderless, true);
       assert.equal(actionLayout.labelled, true);
       assert(actionLayout.tapTargets.every((height) => height >= 44));
